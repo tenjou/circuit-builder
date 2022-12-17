@@ -80,10 +80,18 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
 }
 
 const handleMouseMove = (event: MouseEvent) => {
-    app.highlightedComponent = null
-
     const mouseX = event.clientX - app.camera.x
     const mouseY = event.clientY - app.camera.y
+
+    if (app.draggedComponent) {
+        const midMouseX = mouseX - app.draggedComponent.width / 2
+        const midMouseY = mouseY - app.draggedComponent.height / 2
+        app.draggedComponent.x = Math.round(midMouseX / GridSize) * GridSize
+        app.draggedComponent.y = Math.round(midMouseY / GridSize) * GridSize
+        return
+    }
+
+    app.highlightedComponent = null
 
     for (const component of app.components) {
         if (isInside(component, mouseX, mouseY)) {
@@ -92,20 +100,15 @@ const handleMouseMove = (event: MouseEvent) => {
         }
     }
 
-    if (app.draggedComponent) {
-        const midMouseX = mouseX - app.draggedComponent.width / 2
-        const midMouseY = mouseY - app.draggedComponent.height / 2
-        app.draggedComponent.x = Math.round(midMouseX / GridSize) * GridSize
-        app.draggedComponent.y = Math.round(midMouseY / GridSize) * GridSize
-    } else if (app.camera.isDragging) {
+    app.canvas.style.cursor = app.highlightedComponent ? "pointer" : "default"
+
+    if (app.camera.isDragging) {
         app.camera.x += event.movementX
         app.camera.y += event.movementY
     }
-
-    app.canvas.style.cursor = app.highlightedComponent ? "pointer" : "default"
 }
 
-const handleMouseDown = (event: MouseEvent) => {
+const handleMouseDown = (_event: MouseEvent) => {
     app.camera.isDragging = true
 
     if (app.highlightedComponent) {
@@ -113,7 +116,7 @@ const handleMouseDown = (event: MouseEvent) => {
     }
 }
 
-const handleMouseUp = (event: MouseEvent) => {
+const handleMouseUp = (_event: MouseEvent) => {
     app.camera.isDragging = false
 
     if (app.draggedComponent) {
