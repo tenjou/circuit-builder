@@ -19,7 +19,8 @@ interface App {
     ctx: CanvasRenderingContext2D
     components: Component[]
     componentsMap: Map<number, Component>
-    highlightedComponent: Component | null
+    hoveredComponent: Component | null
+    selectedComponent: Component | null
     draggedComponent: Component | null
     draggedStartX: number
     draggedStartY: number
@@ -60,7 +61,8 @@ const create = () => {
         ctx,
         components: [],
         componentsMap: new Map(),
-        highlightedComponent: null,
+        hoveredComponent: null,
+        selectedComponent: null,
         draggedComponent: null,
         draggedStartX: 0,
         draggedStartY: 0,
@@ -95,9 +97,45 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
     }
 }
 
+const handleMouseDown = (event: MouseEvent) => {
+    const mouseX = event.clientX - app.camera.x
+    const mouseY = event.clientY - app.camera.y
+
+    // if (app.highlightedComponent) {
+    //     app.draggedStartX = mouseX
+    //     app.draggedStartY = mouseY
+
+    //     clickComponent(app.highlightedComponent)
+    // } else {
+    //     app.camera.isDragging = true
+    // }
+}
+
+const handleMouseUp = (event: MouseEvent) => {
+    const mouseX = event.clientX - app.camera.x
+    const mouseY = event.clientY - app.camera.y
+
+    const component = getComponentAt(mouseX, mouseY)
+
+    if (event.detail % 2 === 0 && component) {
+        interactWithComponent(component)
+    } else {
+        app.selectedComponent = component
+    }
+
+    // app.camera.isDragging = false
+
+    // if (app.draggedComponent) {
+    //     app.draggedComponent = null
+    // }
+}
+
 const handleMouseMove = (event: MouseEvent) => {
     const mouseX = event.clientX - app.camera.x
     const mouseY = event.clientY - app.camera.y
+
+    app.hoveredComponent = getComponentAt(mouseX, mouseY)
+    app.canvas.style.cursor = app.hoveredComponent ? "pointer" : "default"
 
     // app.draggedComponent = app.highlightedComponent
     // app.draggedOffsetX = mouseX - app.draggedComponent.x
@@ -113,42 +151,6 @@ const handleMouseMove = (event: MouseEvent) => {
         app.draggedComponent.x = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
         app.draggedComponent.y = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
         return
-    }
-
-    app.highlightedComponent = null
-
-    for (const component of app.components) {
-        if (isInside(component, mouseX, mouseY)) {
-            app.highlightedComponent = component
-            break
-        }
-    }
-
-    app.canvas.style.cursor = app.highlightedComponent ? "pointer" : "default"
-}
-
-const handleMouseDown = (event: MouseEvent) => {
-    const mouseX = event.clientX - app.camera.x
-    const mouseY = event.clientY - app.camera.y
-
-    if (app.highlightedComponent) {
-        app.draggedStartX = mouseX
-        app.draggedStartY = mouseY
-
-        clickComponent(app.highlightedComponent)
-    } else {
-        app.camera.isDragging = true
-    }
-}
-
-const handleMouseUp = (event: MouseEvent) => {
-    const mouseX = event.clientX - app.camera.x
-    const mouseY = event.clientY - app.camera.y
-
-    app.camera.isDragging = false
-
-    if (app.draggedComponent) {
-        app.draggedComponent = null
     }
 }
 
@@ -166,8 +168,11 @@ const render = () => {
         renderComponent(component)
     }
 
-    if (app.highlightedComponent) {
-        renderComponentHighlight(app.highlightedComponent)
+    if (app.selectedComponent) {
+        renderComponentHighlight(app.selectedComponent, 0.5)
+    }
+    if (app.hoveredComponent) {
+        renderComponentHighlight(app.hoveredComponent, 1)
     }
 
     requestAnimationFrame(render)
@@ -240,17 +245,19 @@ const renderComponent = (component: Component) => {
     ctx.closePath()
 }
 
-const renderComponentHighlight = (component: Component) => {
+const renderComponentHighlight = (component: Component, alpha = 1) => {
     const ctx = app.ctx
     const offset = 3
     const width = 40
     const height = 40
 
     ctx.beginPath()
+    ctx.globalAlpha = alpha
     ctx.strokeStyle = "rgb(255, 0, 0)"
     ctx.lineWidth = 2
     ctx.roundRect(component.x - offset, component.y - offset, width + offset * 2, height + offset * 2, 3)
     ctx.stroke()
+    ctx.globalAlpha = 1
 }
 
 const renderCircle = (x: number, y: number, radius: number, color = "rgb(155, 155, 155)") => {
@@ -270,7 +277,7 @@ const renderOnOffSwitch = (component: OnOffSwitch) => {
     renderCircle(120, 200, 6)
 }
 
-const clickComponent = (component: Component) => {
+const interactWithComponent = (component: Component) => {
     if (component.type === "on-off-switch") {
         component.isOn = !component.isOn
     }
@@ -278,6 +285,16 @@ const clickComponent = (component: Component) => {
 
 const isInside = (component: Component, x: number, y: number) => {
     return x >= component.x && x <= component.x + component.width && y >= component.y && y <= component.y + component.height
+}
+
+const getComponentAt = (x: number, y: number) => {
+    for (const component of app.components) {
+        if (isInside(component, x, y)) {
+            return component
+        }
+    }
+
+    return null
 }
 
 try {
