@@ -1,17 +1,16 @@
 interface ComponentBasic {
-    type: "AC" | "DC"
     x: number
     y: number
+    width: number
+    height: number
 }
 
-interface OnOffSwitch {
+interface OnOffSwitch extends ComponentBasic {
     type: "on-off-switch"
-    x: number
-    y: number
     isOn: boolean
 }
 
-type Component = ComponentBasic | OnOffSwitch
+type Component = OnOffSwitch
 type ComponentType = Component["type"]
 
 interface App {
@@ -19,12 +18,15 @@ interface App {
     ctx: CanvasRenderingContext2D
     components: Component[]
     highlightedComponent: Component | null
+    draggedComponent: Component | null
     camera: {
         x: number
         y: number
         isDragging: boolean
     }
 }
+
+const GridSize = 20
 
 let app: App = {} as App
 
@@ -51,6 +53,7 @@ const create = () => {
         ctx,
         components: [],
         highlightedComponent: null,
+        draggedComponent: null,
         camera: {
             x: 0,
             y: 0,
@@ -58,11 +61,22 @@ const create = () => {
         },
     }
 
-    app.components.push({
-        type: "AC",
-        x: 0,
-        y: 0,
-    })
+    app.components.push(createComponent("on-off-switch", 100, 100))
+    app.components.push(createComponent("on-off-switch", 300, 200))
+}
+
+const createComponent = (type: ComponentType, x: number, y: number): Component => {
+    switch (type) {
+        case "on-off-switch":
+            return {
+                type,
+                x,
+                y,
+                width: 40,
+                height: 40,
+                isOn: false,
+            }
+    }
 }
 
 const handleMouseMove = (event: MouseEvent) => {
@@ -78,7 +92,12 @@ const handleMouseMove = (event: MouseEvent) => {
         }
     }
 
-    if (app.camera.isDragging) {
+    if (app.draggedComponent) {
+        const midMouseX = mouseX - app.draggedComponent.width / 2
+        const midMouseY = mouseY - app.draggedComponent.height / 2
+        app.draggedComponent.x = Math.round(midMouseX / GridSize) * GridSize
+        app.draggedComponent.y = Math.round(midMouseY / GridSize) * GridSize
+    } else if (app.camera.isDragging) {
         app.camera.x += event.movementX
         app.camera.y += event.movementY
     }
@@ -88,10 +107,18 @@ const handleMouseMove = (event: MouseEvent) => {
 
 const handleMouseDown = (event: MouseEvent) => {
     app.camera.isDragging = true
+
+    if (app.highlightedComponent) {
+        app.draggedComponent = app.highlightedComponent
+    }
 }
 
 const handleMouseUp = (event: MouseEvent) => {
     app.camera.isDragging = false
+
+    if (app.draggedComponent) {
+        app.draggedComponent = null
+    }
 }
 
 const render = () => {
@@ -122,18 +149,17 @@ const drawGrid = () => {
     ctx.strokeStyle = "rgb(200, 200, 200)"
     ctx.lineWidth = 1
 
-    const size = 20
     const signX = -Math.sign(camera.x)
     const signY = -Math.sign(camera.y)
-    const offsetX = signX * size - Math.abs(camera.x % size) * signX
-    const offsetY = signY * size - Math.abs(camera.y % size) * signY
+    const offsetX = signX * GridSize - Math.abs(camera.x % GridSize) * signX
+    const offsetY = signY * GridSize - Math.abs(camera.y % GridSize) * signY
 
-    for (let x = offsetX; x < canvas.width; x += size) {
+    for (let x = offsetX; x < canvas.width; x += GridSize) {
         ctx.moveTo(x, 0)
         ctx.lineTo(x, canvas.height)
     }
 
-    for (let y = offsetY; y < canvas.height; y += size) {
+    for (let y = offsetY; y < canvas.height; y += GridSize) {
         ctx.moveTo(0, y)
         ctx.lineTo(canvas.width, y)
     }
@@ -156,19 +182,19 @@ const renderComponent = (component: Component) => {
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
 
-    switch (component.type) {
-        case "AC":
-            ctx.font = `20px Verdana`
-            ctx.fillText("AC", component.x + width / 2, component.y + height / 2)
-            break
+    // switch (component.type) {
+    //     case "AC":
+    //         ctx.font = `20px Verdana`
+    //         ctx.fillText("AC", component.x + width / 2, component.y + height / 2)
+    //         break
 
-        case "DC":
-            ctx.font = `20px Verdana`
-            ctx.fillText("DC", component.x + width / 2, component.y + height / 2)
-            ctx.font = `12px Verdana`
-            ctx.fillText("9V", component.x + width / 2, component.y + height / 2 + 14)
-            break
-    }
+    //     case "DC":
+    //         ctx.font = `20px Verdana`
+    //         ctx.fillText("DC", component.x + width / 2, component.y + height / 2)
+    //         ctx.font = `12px Verdana`
+    //         ctx.fillText("9V", component.x + width / 2, component.y + height / 2 + 14)
+    //         break
+    // }
 
     ctx.closePath()
 }
@@ -190,10 +216,10 @@ const renderCircle = (x: number, y: number, radius: number) => {
     const ctx = app.ctx
 
     ctx.beginPath()
-    ctx.strokeStyle = "rgb(0, 0, 0)"
-    ctx.fillStyle = "rgb(30, 30, 30)"
-    ctx.lineWidth = 1
-    ctx.arc(x, y, radius, 0, 2 * Math.PI)
+    ctx.strokeStyle = "rgb(45, 45, 45)"
+    ctx.fillStyle = "rgb(155, 155, 155)"
+    ctx.lineWidth = 2
+    ctx.arc(x + radius + 20 - radius, y + radius + 20 - radius, radius, 0, 2 * Math.PI)
     ctx.fill()
     ctx.stroke()
 }
@@ -204,7 +230,7 @@ const renderOnOffSwitch = (component: OnOffSwitch) => {
 }
 
 const isInside = (component: Component, x: number, y: number) => {
-    return x > component.x && x < component.x + 40 && y > component.y && y < component.y + 40
+    return x >= component.x && x <= component.x + component.width && y >= component.y && y <= component.y + component.height
 }
 
 try {
