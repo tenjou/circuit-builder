@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "strict": true,
+        "noFallthroughCasesInSwitch": true,
+        "noEmit": true,
+        "target": "esnext",
+        "lib": ["dom", "ES2017"]
+    },
+    "include": ["src"]
+}

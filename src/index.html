@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+        <title>PowerSeeker</title>
+        <link rel="stylesheet" href="styles.css" />
+
+        <script>
+            function html(str, ...values) {
+                if (values.length) {
+                    const zipped = str.map((entry, n) => {
+                        return entry.concat(values[n])
+                    })
+
+                    return zipped.join("")
+                }
+
+                return str
+            }
+        </script>
+        <script type="module" src="app.ts"></script>
+    </head>
+
+    <body>
+        <canvas id="canvas"></canvas>
+    </body>
+</html>
