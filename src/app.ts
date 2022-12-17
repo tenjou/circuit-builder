@@ -1,4 +1,5 @@
 interface ComponentBasic {
+    id: number
     x: number
     y: number
     width: number
@@ -17,8 +18,11 @@ interface App {
     canvas: HTMLCanvasElement
     ctx: CanvasRenderingContext2D
     components: Component[]
+    componentsMap: Map<number, Component>
     highlightedComponent: Component | null
     draggedComponent: Component | null
+    draggedStartX: number
+    draggedStartY: number
     draggedOffsetX: number
     draggedOffsetY: number
     camera: {
@@ -26,6 +30,7 @@ interface App {
         y: number
         isDragging: boolean
     }
+    lastComponentId: number
 }
 
 const GridSize = 20
@@ -54,8 +59,11 @@ const create = () => {
         canvas,
         ctx,
         components: [],
+        componentsMap: new Map(),
         highlightedComponent: null,
         draggedComponent: null,
+        draggedStartX: 0,
+        draggedStartY: 0,
         draggedOffsetX: 0,
         draggedOffsetY: 0,
         camera: {
@@ -63,16 +71,20 @@ const create = () => {
             y: 0,
             isDragging: false,
         },
+        lastComponentId: 0,
     }
 
     app.components.push(createComponent("on-off-switch", 100, 100))
-    app.components.push(createComponent("on-off-switch", 300, 200))
+    app.components.push(createComponent("on-off-switch", 100, 160))
 }
 
 const createComponent = (type: ComponentType, x: number, y: number): Component => {
+    const id = app.lastComponentId++
+
     switch (type) {
         case "on-off-switch":
             return {
+                id,
                 type,
                 x,
                 y,
@@ -86,6 +98,16 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
 const handleMouseMove = (event: MouseEvent) => {
     const mouseX = event.clientX - app.camera.x
     const mouseY = event.clientY - app.camera.y
+
+    // app.draggedComponent = app.highlightedComponent
+    // app.draggedOffsetX = mouseX - app.draggedComponent.x
+    // app.draggedOffsetY = mouseY - app.draggedComponent.y
+
+    if (app.camera.isDragging) {
+        app.camera.x += event.movementX
+        app.camera.y += event.movementY
+        return
+    }
 
     if (app.draggedComponent) {
         app.draggedComponent.x = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
@@ -103,27 +125,26 @@ const handleMouseMove = (event: MouseEvent) => {
     }
 
     app.canvas.style.cursor = app.highlightedComponent ? "pointer" : "default"
-
-    if (app.camera.isDragging) {
-        app.camera.x += event.movementX
-        app.camera.y += event.movementY
-    }
 }
 
 const handleMouseDown = (event: MouseEvent) => {
-    app.camera.isDragging = true
-
     const mouseX = event.clientX - app.camera.x
     const mouseY = event.clientY - app.camera.y
 
     if (app.highlightedComponent) {
-        app.draggedComponent = app.highlightedComponent
-        app.draggedOffsetX = mouseX - app.draggedComponent.x
-        app.draggedOffsetY = mouseY - app.draggedComponent.y
+        app.draggedStartX = mouseX
+        app.draggedStartY = mouseY
+
+        clickComponent(app.highlightedComponent)
+    } else {
+        app.camera.isDragging = true
     }
 }
 
-const handleMouseUp = (_event: MouseEvent) => {
+const handleMouseUp = (event: MouseEvent) => {
+    const mouseX = event.clientX - app.camera.x
+    const mouseY = event.clientY - app.camera.y
+
     app.camera.isDragging = false
 
     if (app.draggedComponent) {
@@ -192,6 +213,30 @@ const renderComponent = (component: Component) => {
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
 
+    switch (component.type) {
+        case "on-off-switch":
+            renderCircle(component.x, component.y, 14, component.isOn ? "rgb(125 211 252)" : "rgb(155, 155, 155)")
+
+            ctx.beginPath()
+            ctx.strokeStyle = "black"
+            ctx.lineWidth = 2
+            ctx.moveTo(component.x + 41, component.y + 20)
+            ctx.lineTo(component.x + 141, component.y + 20)
+            ctx.stroke()
+
+            if (component.isOn) {
+                ctx.globalAlpha = 0.5
+                ctx.beginPath()
+                ctx.strokeStyle = "rgb(56 189 248)"
+                ctx.lineWidth = 6
+                ctx.moveTo(component.x + 41, component.y + 20)
+                ctx.lineTo(component.x + 141, component.y + 20)
+                ctx.stroke()
+                ctx.globalAlpha = 1
+            }
+            break
+    }
+
     ctx.closePath()
 }
 
@@ -208,12 +253,12 @@ const renderComponentHighlight = (component: Component) => {
     ctx.stroke()
 }
 
-const renderCircle = (x: number, y: number, radius: number) => {
+const renderCircle = (x: number, y: number, radius: number, color = "rgb(155, 155, 155)") => {
     const ctx = app.ctx
 
     ctx.beginPath()
     ctx.strokeStyle = "rgb(45, 45, 45)"
-    ctx.fillStyle = "rgb(155, 155, 155)"
+    ctx.fillStyle = color
     ctx.lineWidth = 2
     ctx.arc(x + radius + 20 - radius, y + radius + 20 - radius, radius, 0, 2 * Math.PI)
     ctx.fill()
@@ -223,6 +268,12 @@ const renderCircle = (x: number, y: number, radius: number) => {
 const renderOnOffSwitch = (component: OnOffSwitch) => {
     renderCircle(100, 200, 16)
     renderCircle(120, 200, 6)
+}
+
+const clickComponent = (component: Component) => {
+    if (component.type === "on-off-switch") {
+        component.isOn = !component.isOn
+    }
 }
 
 const isInside = (component: Component, x: number, y: number) => {
