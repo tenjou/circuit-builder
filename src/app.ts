@@ -22,14 +22,13 @@ interface App {
     hoveredComponent: Component | null
     selectedComponent: Component | null
     draggedComponent: Component | null
-    draggedStartX: number
-    draggedStartY: number
     draggedOffsetX: number
     draggedOffsetY: number
+    isHolding: boolean
+    isDragging: boolean
     camera: {
         x: number
         y: number
-        isDragging: boolean
     }
     lastComponentId: number
 }
@@ -64,14 +63,13 @@ const create = () => {
         hoveredComponent: null,
         selectedComponent: null,
         draggedComponent: null,
-        draggedStartX: 0,
-        draggedStartY: 0,
         draggedOffsetX: 0,
         draggedOffsetY: 0,
+        isHolding: false,
+        isDragging: false,
         camera: {
             x: 0,
             y: 0,
-            isDragging: false,
         },
         lastComponentId: 0,
     }
@@ -94,63 +92,6 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
                 height: 40,
                 isOn: false,
             }
-    }
-}
-
-const handleMouseDown = (event: MouseEvent) => {
-    const mouseX = event.clientX - app.camera.x
-    const mouseY = event.clientY - app.camera.y
-
-    // if (app.highlightedComponent) {
-    //     app.draggedStartX = mouseX
-    //     app.draggedStartY = mouseY
-
-    //     clickComponent(app.highlightedComponent)
-    // } else {
-    //     app.camera.isDragging = true
-    // }
-}
-
-const handleMouseUp = (event: MouseEvent) => {
-    const mouseX = event.clientX - app.camera.x
-    const mouseY = event.clientY - app.camera.y
-
-    const component = getComponentAt(mouseX, mouseY)
-
-    if (event.detail % 2 === 0 && component) {
-        interactWithComponent(component)
-    } else {
-        app.selectedComponent = component
-    }
-
-    // app.camera.isDragging = false
-
-    // if (app.draggedComponent) {
-    //     app.draggedComponent = null
-    // }
-}
-
-const handleMouseMove = (event: MouseEvent) => {
-    const mouseX = event.clientX - app.camera.x
-    const mouseY = event.clientY - app.camera.y
-
-    app.hoveredComponent = getComponentAt(mouseX, mouseY)
-    app.canvas.style.cursor = app.hoveredComponent ? "pointer" : "default"
-
-    // app.draggedComponent = app.highlightedComponent
-    // app.draggedOffsetX = mouseX - app.draggedComponent.x
-    // app.draggedOffsetY = mouseY - app.draggedComponent.y
-
-    if (app.camera.isDragging) {
-        app.camera.x += event.movementX
-        app.camera.y += event.movementY
-        return
-    }
-
-    if (app.draggedComponent) {
-        app.draggedComponent.x = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
-        app.draggedComponent.y = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
-        return
     }
 }
 
@@ -295,6 +236,61 @@ const getComponentAt = (x: number, y: number) => {
     }
 
     return null
+}
+
+const handleMouseMove = (event: MouseEvent) => {
+    const mouseX = event.clientX - app.camera.x
+    const mouseY = event.clientY - app.camera.y
+
+    app.hoveredComponent = getComponentAt(mouseX, mouseY)
+    app.canvas.style.cursor = app.hoveredComponent ? "pointer" : "default"
+
+    if (app.isHolding) {
+        if (app.draggedComponent) {
+            app.draggedComponent.x = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
+            app.draggedComponent.y = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
+        } else {
+            app.camera.x += event.movementX
+            app.camera.y += event.movementY
+        }
+
+        app.isDragging = true
+    }
+}
+
+const handleMouseDown = (event: MouseEvent) => {
+    const mouseX = event.clientX - app.camera.x
+    const mouseY = event.clientY - app.camera.y
+
+    if (app.hoveredComponent) {
+        app.draggedComponent = app.hoveredComponent
+        app.draggedOffsetX = mouseX - app.draggedComponent.x
+        app.draggedOffsetY = mouseY - app.draggedComponent.y
+    }
+
+    app.isHolding = true
+}
+
+const handleMouseUp = (event: MouseEvent) => {
+    const mouseX = event.clientX - app.camera.x
+    const mouseY = event.clientY - app.camera.y
+
+    if (app.draggedComponent) {
+        app.draggedComponent = null
+    }
+
+    if (!app.isDragging) {
+        const component = getComponentAt(mouseX, mouseY)
+
+        if (event.detail % 2 === 0 && component) {
+            interactWithComponent(component)
+        } else {
+            app.selectedComponent = component
+        }
+    }
+
+    app.isHolding = false
+    app.isDragging = false
 }
 
 try {
