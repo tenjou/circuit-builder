@@ -19,6 +19,8 @@ interface App {
     components: Component[]
     highlightedComponent: Component | null
     draggedComponent: Component | null
+    draggedOffsetX: number
+    draggedOffsetY: number
     camera: {
         x: number
         y: number
@@ -54,6 +56,8 @@ const create = () => {
         components: [],
         highlightedComponent: null,
         draggedComponent: null,
+        draggedOffsetX: 0,
+        draggedOffsetY: 0,
         camera: {
             x: 0,
             y: 0,
@@ -84,10 +88,8 @@ const handleMouseMove = (event: MouseEvent) => {
     const mouseY = event.clientY - app.camera.y
 
     if (app.draggedComponent) {
-        const midMouseX = mouseX - app.draggedComponent.width / 2
-        const midMouseY = mouseY - app.draggedComponent.height / 2
-        app.draggedComponent.x = Math.round(midMouseX / GridSize) * GridSize
-        app.draggedComponent.y = Math.round(midMouseY / GridSize) * GridSize
+        app.draggedComponent.x = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
+        app.draggedComponent.y = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
         return
     }
 
@@ -108,11 +110,16 @@ const handleMouseMove = (event: MouseEvent) => {
     }
 }
 
-const handleMouseDown = (_event: MouseEvent) => {
+const handleMouseDown = (event: MouseEvent) => {
     app.camera.isDragging = true
+
+    const mouseX = event.clientX - app.camera.x
+    const mouseY = event.clientY - app.camera.y
 
     if (app.highlightedComponent) {
         app.draggedComponent = app.highlightedComponent
+        app.draggedOffsetX = mouseX - app.draggedComponent.x
+        app.draggedOffsetY = mouseY - app.draggedComponent.y
     }
 }
 
@@ -184,20 +191,6 @@ const renderComponent = (component: Component) => {
     ctx.stroke()
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
-
-    // switch (component.type) {
-    //     case "AC":
-    //         ctx.font = `20px Verdana`
-    //         ctx.fillText("AC", component.x + width / 2, component.y + height / 2)
-    //         break
-
-    //     case "DC":
-    //         ctx.font = `20px Verdana`
-    //         ctx.fillText("DC", component.x + width / 2, component.y + height / 2)
-    //         ctx.font = `12px Verdana`
-    //         ctx.fillText("9V", component.x + width / 2, component.y + height / 2 + 14)
-    //         break
-    // }
 
     ctx.closePath()
 }
