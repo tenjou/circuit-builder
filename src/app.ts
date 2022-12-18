@@ -30,6 +30,11 @@ interface App {
     componentsBuffer: Component[]
     components: Record<number, Component>
     wires: Wire[][]
+    pins: Record<number, Pin>
+    collisions: {
+        components: Record<number, number>
+        pins: Record<number, number>
+    }
     hoveredComponent: Component | null
     selectedComponent: Component | null
     draggedComponent: Component | null
@@ -45,6 +50,7 @@ interface App {
 }
 
 const GridSize = 20
+const GridIndexSize = 1000
 
 let app: App = {} as App
 
@@ -72,6 +78,7 @@ const create = () => {
         componentsBuffer: [],
         components: {},
         wires: [],
+        pins: {},
         hoveredComponent: null,
         selectedComponent: null,
         draggedComponent: null,
@@ -79,6 +86,10 @@ const create = () => {
         draggedOffsetY: 0,
         isHolding: false,
         isDragging: false,
+        collisions: {
+            components: {},
+            pins: {},
+        },
         camera: {
             x: 0,
             y: 0,
@@ -92,10 +103,10 @@ const create = () => {
 
     connectToComponent(app.components[1], app.components[2], 0, 0)
 
-    app.wires.push([
-        [100, 140],
-        [200, 140],
-    ])
+    // app.wires.push([
+    //     [100, 140],
+    //     [200, 140],
+    // ])
 }
 
 const createComponent = (type: ComponentType, x: number, y: number): Component => {
@@ -135,9 +146,42 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
 
     app.components[id] = component
 
+    moveComponent(component, x, y)
+
     console.log("Created component", component)
 
     return component
+}
+
+const moveComponent = (component: Component, x: number, y: number) => {
+    if (component.x !== x || component.y !== y) {
+        const prevStartGridX = Math.floor(component.x / GridSize)
+        const prevStartGridY = Math.floor(component.y / GridSize)
+        const prevEndGridX = Math.floor((component.x + component.width) / GridSize)
+        const prevEndGridY = Math.floor((component.y + component.height) / GridSize)
+
+        for (let gridY = prevStartGridY; gridY < prevEndGridY; gridY += 1) {
+            for (let gridX = prevStartGridX; gridX < prevEndGridX; gridX += 1) {
+                const gridId = gridX + gridY * GridIndexSize
+                delete app.collisions.components[gridId]
+            }
+        }
+    }
+
+    component.x = x
+    component.y = y
+
+    const startGridX = Math.floor(x / GridSize)
+    const startGridY = Math.floor(y / GridSize)
+    const endGridX = Math.floor((x + component.width) / GridSize)
+    const endGridY = Math.floor((y + component.height) / GridSize)
+
+    for (let gridY = startGridY; gridY < endGridY; gridY += 1) {
+        for (let gridX = startGridX; gridX < endGridX; gridX += 1) {
+            const gridId = gridX + gridY * GridIndexSize
+            app.collisions.components[gridId] = component.id
+        }
+    }
 }
 
 const connectToComponent = (from: Component, to: Component, fromPinIndex: number, toPinIndex: number) => {
@@ -323,15 +367,15 @@ const interactWithComponent = (component: Component) => {
     }
 }
 
-const isInside = (component: Component, x: number, y: number) => {
-    return x >= component.x && x <= component.x + component.width && y >= component.y && y <= component.y + component.height
-}
-
 const getComponentAt = (x: number, y: number) => {
-    for (const component of app.componentsBuffer) {
-        if (isInside(component, x, y)) {
-            return component
-        }
+    const gridX = Math.floor(x / GridSize)
+    const gridY = Math.floor(y / GridSize)
+    const gridId = gridX + gridY * GridIndexSize
+
+    const componentId = app.collisions.components[gridId]
+    if (componentId !== undefined) {
+        const component = app.components[componentId]
+        return component
     }
 
     return null
@@ -346,8 +390,9 @@ const handleMouseMove = (event: MouseEvent) => {
 
     if (app.isHolding) {
         if (app.draggedComponent) {
-            app.draggedComponent.x = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
-            app.draggedComponent.y = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
+            const newX = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
+            const newY = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
+            moveComponent(app.draggedComponent, newX, newY)
         } else {
             app.camera.x += event.movementX
             app.camera.y += event.movementY
