@@ -1,4 +1,7 @@
-interface Pin {}
+interface Pin {
+    pinIndex: number
+    isOut: boolean
+}
 
 interface ComponentBasic {
     id: number
@@ -6,8 +9,8 @@ interface ComponentBasic {
     y: number
     width: number
     height: number
-    out: Pin[]
-    in: Pin[]
+    out: number[]
+    in: number[]
 }
 
 interface OnOffSwitch extends ComponentBasic {
@@ -34,6 +37,11 @@ interface App {
     collisions: {
         components: Record<number, number>
         pins: Record<number, number>
+    }
+    hoveredPin: {
+        componentedId?: number
+        gridX: number
+        gridY: number
     }
     hoveredComponent: Component | null
     selectedComponent: Component | null
@@ -79,6 +87,11 @@ const create = () => {
         components: {},
         wires: [],
         pins: {},
+        hoveredPin: {
+            componentedId: undefined,
+            gridX: 0,
+            gridY: 0,
+        },
         hoveredComponent: null,
         selectedComponent: null,
         draggedComponent: null,
@@ -166,6 +179,20 @@ const moveComponent = (component: Component, x: number, y: number) => {
                 delete app.collisions.components[gridId]
             }
         }
+
+        for (let i = 0; i < component.in.length; i += 1) {
+            const pinX = component.x
+            const pinY = component.y + component.height / 2
+            const pinGridId = Math.floor(pinX / GridSize) + Math.floor(pinY / GridSize) * GridIndexSize
+            delete app.collisions.pins[pinGridId]
+        }
+
+        for (let n = 0; n < component.out.length; n += 1) {
+            const pinX = component.x + component.width
+            const pinY = component.y + component.height / 2
+            const pinGridId = Math.floor(pinX / GridSize) + Math.floor(pinY / GridSize) * GridIndexSize
+            delete app.collisions.pins[pinGridId]
+        }
     }
 
     component.x = x
@@ -181,6 +208,20 @@ const moveComponent = (component: Component, x: number, y: number) => {
             const gridId = gridX + gridY * GridIndexSize
             app.collisions.components[gridId] = component.id
         }
+    }
+
+    for (let i = 0; i < component.in.length; i += 1) {
+        const pinX = x
+        const pinY = y + component.height / 2
+        const pinGridId = Math.floor(pinX / GridSize) + Math.floor(pinY / GridSize) * GridIndexSize
+        app.collisions.pins[pinGridId] = component.id
+    }
+
+    for (let n = 0; n < component.out.length; n += 1) {
+        const pinX = x + component.width
+        const pinY = y + component.height / 2
+        const pinGridId = Math.floor(pinX / GridSize) + Math.floor(pinY / GridSize) * GridIndexSize
+        app.collisions.pins[pinGridId] = component.id
     }
 }
 
@@ -204,7 +245,6 @@ const render = () => {
     for (const wire of app.wires) {
         renderWire(wire)
     }
-
     for (const component of app.componentsBuffer) {
         renderComponent(component)
     }
@@ -212,8 +252,13 @@ const render = () => {
     if (app.selectedComponent) {
         renderComponentHighlight(app.selectedComponent, 0.5)
     }
-    if (app.hoveredComponent) {
-        renderComponentHighlight(app.hoveredComponent, 1)
+
+    if (app.hoveredPin.componentedId !== undefined) {
+        renderPinHiglight()
+    } else {
+        if (app.hoveredComponent) {
+            renderComponentHighlight(app.hoveredComponent, 1)
+        }
     }
 
     requestAnimationFrame(render)
@@ -288,13 +333,6 @@ const renderComponent = (component: Component) => {
 
             renderCircle(component.x + halfWidth, component.y + halfHeight, 14, component.isOn ? "rgb(125 211 252)" : "rgb(155, 155, 155)")
 
-            // ctx.beginPath()
-            // ctx.strokeStyle = "black"
-            // ctx.lineWidth = 2
-            // ctx.moveTo(component.x + 41, component.y + 20)
-            // ctx.lineTo(component.x + 141, component.y + 20)
-            // ctx.stroke()
-
             // if (component.isOn) {
             //     ctx.globalAlpha = 0.5
             //     ctx.beginPath()
@@ -311,29 +349,40 @@ const renderComponent = (component: Component) => {
     }
 
     if (component.in.length > 0) {
-        const pinX = component.x - 1
+        const pinX = component.x
         const pinY = component.y + 20
         renderCircle(pinX, pinY, 4, "black")
     }
 
     if (component.out.length > 0) {
-        const pinX = component.x + component.width + 1
+        const pinX = component.x + component.width
         const pinY = component.y + 20
         renderCircle(pinX, pinY, 4, "black")
     }
 }
 
 const renderComponentHighlight = (component: Component, alpha = 1) => {
+    renderHighlight(component.x, component.y, component.width, component.height, alpha)
+}
+
+const renderPinHiglight = () => {
+    const { hoveredPin } = app
+
+    const x = hoveredPin.gridX * GridSize
+    const y = hoveredPin.gridY * GridSize
+
+    renderHighlight(x - 5, y - 5, 10, 10)
+}
+
+const renderHighlight = (x: number, y: number, width: number, height: number, alpha = 1) => {
     const ctx = app.ctx
     const offset = 3
-    const width = 40
-    const height = 40
 
     ctx.beginPath()
     ctx.globalAlpha = alpha
     ctx.strokeStyle = "rgb(255, 0, 0)"
     ctx.lineWidth = 2
-    ctx.roundRect(component.x - offset, component.y - offset, width + offset * 2, height + offset * 2, 3)
+    ctx.roundRect(x - offset, y - offset, width + offset * 2, height + offset * 2, 3)
     ctx.stroke()
     ctx.globalAlpha = 1
 }
@@ -385,21 +434,32 @@ const handleMouseMove = (event: MouseEvent) => {
     const mouseX = event.clientX - app.camera.x
     const mouseY = event.clientY - app.camera.y
 
-    app.hoveredComponent = getComponentAt(mouseX, mouseY)
-    app.canvas.style.cursor = app.hoveredComponent ? "pointer" : "default"
+    const pinGridX = Math.floor((mouseX + GridSize * 0.5) / GridSize)
+    const pinGridY = Math.floor((mouseY + GridSize * 0.5) / GridSize)
+    const pinGridId = pinGridX + pinGridY * GridIndexSize
 
-    if (app.isHolding) {
-        if (app.draggedComponent) {
-            const newX = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
-            const newY = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
-            moveComponent(app.draggedComponent, newX, newY)
-        } else {
-            app.camera.x += event.movementX
-            app.camera.y += event.movementY
+    app.hoveredPin.componentedId = app.collisions.pins[pinGridId]
+    if (app.hoveredPin.componentedId !== undefined) {
+        app.hoveredPin.gridX = pinGridX
+        app.hoveredPin.gridY = pinGridY
+    } else {
+        app.hoveredComponent = getComponentAt(mouseX, mouseY)
+
+        if (app.isHolding) {
+            if (app.draggedComponent) {
+                const newX = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
+                const newY = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
+                moveComponent(app.draggedComponent, newX, newY)
+            } else {
+                app.camera.x += event.movementX
+                app.camera.y += event.movementY
+            }
+
+            app.isDragging = true
         }
-
-        app.isDragging = true
     }
+
+    app.canvas.style.cursor = app.hoveredComponent || app.hoveredPin.componentedId !== undefined ? "pointer" : "default"
 }
 
 const handleMouseDown = (event: MouseEvent) => {
