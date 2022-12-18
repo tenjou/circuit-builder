@@ -86,14 +86,18 @@ const create = () => {
     app.componentsBuffer.push(createComponent("on-off-switch", 100, 100))
     app.componentsBuffer.push(createComponent("on-off-switch", 100, 160))
     app.componentsBuffer.push(createComponent("led", 300, 160))
+
+    connectToComponent(app.components[1], app.components[2], 0, 0)
 }
 
 const createComponent = (type: ComponentType, x: number, y: number): Component => {
     const id = app.lastComponentId++
 
+    let component: Component
+
     switch (type) {
         case "on-off-switch":
-            return {
+            component = {
                 id,
                 type,
                 x,
@@ -102,11 +106,12 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
                 height: 40,
                 isOn: false,
                 in: [],
-                out: [-1, -1],
+                out: [-1],
             }
+            break
 
         case "led":
-            return {
+            component = {
                 id,
                 type,
                 x,
@@ -117,7 +122,21 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
                 in: [-1],
                 out: [],
             }
+            break
     }
+
+    app.components[id] = component
+
+    console.log("Created component", component)
+
+    return component
+}
+
+const connectToComponent = (from: Component, to: Component, fromPinIndex: number, toPinIndex: number) => {
+    console.log("Connecting", from, to, fromPinIndex, toPinIndex)
+
+    from.out[fromPinIndex] = to.id
+    to.in[toPinIndex] = from.id
 }
 
 const render = () => {
@@ -257,8 +276,19 @@ const renderCircle = (x: number, y: number, radius: number, color = "rgb(155, 15
 }
 
 const interactWithComponent = (component: Component) => {
-    if (component.type === "on-off-switch") {
-        component.isOn = !component.isOn
+    if (component.type !== "on-off-switch") {
+        return
+    }
+
+    component.isOn = !component.isOn
+
+    for (const pin of component.out) {
+        if (pin === -1) {
+            continue
+        }
+
+        const connectedComponent = app.componentsBuffer[pin as number]
+        connectedComponent.isOn = component.isOn
     }
 }
 
