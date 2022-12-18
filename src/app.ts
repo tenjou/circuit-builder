@@ -25,14 +25,13 @@ interface LED extends ComponentBasic {
 
 type Component = OnOffSwitch | LED
 type ComponentType = Component["type"]
-type Wire = number[]
 
 interface App {
     canvas: HTMLCanvasElement
     ctx: CanvasRenderingContext2D
     componentsBuffer: Component[]
     components: Record<number, Component>
-    wires: Wire[][]
+    wires: number[][]
     pins: Record<number, Pin>
     collisions: {
         components: Record<number, number>
@@ -55,6 +54,7 @@ interface App {
         y: number
     }
     lastComponentId: number
+    wirePlacement: number[]
 }
 
 const GridSize = 20
@@ -108,6 +108,7 @@ const create = () => {
             y: 0,
         },
         lastComponentId: 0,
+        wirePlacement: [],
     }
 
     app.componentsBuffer.push(createComponent("on-off-switch", 100, 100))
@@ -116,10 +117,7 @@ const create = () => {
 
     connectToComponent(app.components[1], app.components[2], 0, 0)
 
-    // app.wires.push([
-    //     [100, 140],
-    //     [200, 140],
-    // ])
+    app.wires.push([2, 3, 5, 3])
 }
 
 const createComponent = (type: ComponentType, x: number, y: number): Component => {
@@ -233,18 +231,22 @@ const connectToComponent = (from: Component, to: Component, fromPinIndex: number
 }
 
 const render = () => {
-    app.ctx.resetTransform()
+    const { ctx } = app
 
-    app.ctx.fillStyle = "rgb(229 231 235)"
-    app.ctx.fillRect(0, 0, app.canvas.width, app.canvas.height)
+    ctx.resetTransform()
+
+    ctx.fillStyle = "rgb(229 231 235)"
+    ctx.fillRect(0, 0, app.canvas.width, app.canvas.height)
 
     renderGrid()
 
-    app.ctx.translate(app.camera.x, app.camera.y)
+    ctx.translate(app.camera.x, app.camera.y)
 
     for (const wire of app.wires) {
         renderWire(wire)
     }
+    renderWire(app.wirePlacement)
+
     for (const component of app.componentsBuffer) {
         renderComponent(component)
     }
@@ -290,19 +292,17 @@ const renderGrid = () => {
     ctx.closePath()
 }
 
-const renderWire = (wire: Wire[]) => {
+const renderWire = (wire: number[]) => {
     const { ctx } = app
 
     ctx.beginPath()
     ctx.strokeStyle = "black"
     ctx.lineWidth = 2
 
-    const prev = wire[0]
-    ctx.moveTo(prev[0], prev[1])
+    ctx.moveTo(wire[0] * GridSize, wire[1] * GridSize)
 
-    for (let i = 1; i < wire.length; i++) {
-        const next = wire[i]
-        ctx.lineTo(next[0], next[1])
+    for (let n = 2; n < wire.length; n += 2) {
+        ctx.lineTo(wire[n] * GridSize, wire[n + 1] * GridSize)
     }
 
     ctx.stroke()
@@ -362,29 +362,29 @@ const renderComponent = (component: Component) => {
 }
 
 const renderComponentHighlight = (component: Component, alpha = 1) => {
-    renderHighlight(component.x, component.y, component.width, component.height, alpha)
-}
-
-const renderPinHiglight = () => {
-    const { hoveredPin } = app
-
-    const x = hoveredPin.gridX * GridSize
-    const y = hoveredPin.gridY * GridSize
-
-    renderHighlight(x - 5, y - 5, 10, 10)
-}
-
-const renderHighlight = (x: number, y: number, width: number, height: number, alpha = 1) => {
     const ctx = app.ctx
-    const offset = 3
+    const offset = 2
 
     ctx.beginPath()
     ctx.globalAlpha = alpha
     ctx.strokeStyle = "rgb(255, 0, 0)"
     ctx.lineWidth = 2
-    ctx.roundRect(x - offset, y - offset, width + offset * 2, height + offset * 2, 3)
+    ctx.roundRect(component.x - offset, component.y - offset, component.width + offset * 2, component.height + offset * 2, 3)
     ctx.stroke()
     ctx.globalAlpha = 1
+}
+
+const renderPinHiglight = () => {
+    const { ctx, hoveredPin } = app
+
+    const x = hoveredPin.gridX * GridSize
+    const y = hoveredPin.gridY * GridSize
+
+    ctx.beginPath()
+    ctx.strokeStyle = "rgb(255, 0, 0)"
+    ctx.lineWidth = 2
+    ctx.arc(x, y, 6, 0, 2 * Math.PI)
+    ctx.stroke()
 }
 
 const renderCircle = (x: number, y: number, radius: number, color = "rgb(155, 155, 155)") => {
@@ -431,17 +431,19 @@ const getComponentAt = (x: number, y: number) => {
 }
 
 const handleMouseMove = (event: MouseEvent) => {
+    const { wirePlacement } = app
+
     const mouseX = event.clientX - app.camera.x
     const mouseY = event.clientY - app.camera.y
 
-    const pinGridX = Math.floor((mouseX + GridSize * 0.5) / GridSize)
-    const pinGridY = Math.floor((mouseY + GridSize * 0.5) / GridSize)
-    const pinGridId = pinGridX + pinGridY * GridIndexSize
+    const gridX = Math.floor((mouseX + GridSize * 0.5) / GridSize)
+    const gridY = Math.floor((mouseY + GridSize * 0.5) / GridSize)
+    const pinGridId = gridX + gridY * GridIndexSize
 
     app.hoveredPin.componentedId = app.collisions.pins[pinGridId]
     if (app.hoveredPin.componentedId !== undefined) {
-        app.hoveredPin.gridX = pinGridX
-        app.hoveredPin.gridY = pinGridY
+        app.hoveredPin.gridX = gridX
+        app.hoveredPin.gridY = gridY
     } else {
         app.hoveredComponent = getComponentAt(mouseX, mouseY)
 
@@ -451,11 +453,41 @@ const handleMouseMove = (event: MouseEvent) => {
                 const newY = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
                 moveComponent(app.draggedComponent, newX, newY)
             } else {
-                app.camera.x += event.movementX
-                app.camera.y += event.movementY
+                // app.camera.x += event.movementX
+                // app.camera.y += event.movementY
             }
 
             app.isDragging = true
+        }
+    }
+
+    const startGridX = app.wirePlacement[0]
+    const startGridY = app.wirePlacement[1]
+
+    if (startGridX === gridX && startGridY === gridY) {
+        wirePlacement.length = 4
+        wirePlacement[2] = gridX
+        wirePlacement[3] = gridY
+    } else {
+        const diffX = Math.abs(gridX - startGridX)
+        const diffY = Math.abs(gridY - startGridY)
+
+        wirePlacement.length = 8
+
+        if (diffY > diffX) {
+            wirePlacement[2] = startGridX
+            wirePlacement[3] = gridY - Math.floor((gridY - startGridY) / 2)
+            wirePlacement[4] = gridX
+            wirePlacement[5] = gridY - Math.floor((gridY - startGridY) / 2)
+            wirePlacement[6] = gridX
+            wirePlacement[7] = gridY
+        } else {
+            wirePlacement[2] = gridX - Math.floor((gridX - startGridX) / 2)
+            wirePlacement[3] = startGridY
+            wirePlacement[4] = gridX - Math.floor((gridX - startGridX) / 2)
+            wirePlacement[5] = gridY
+            wirePlacement[6] = gridX
+            wirePlacement[7] = gridY
         }
     }
 
@@ -471,6 +503,10 @@ const handleMouseDown = (event: MouseEvent) => {
         app.draggedOffsetX = mouseX - app.draggedComponent.x
         app.draggedOffsetY = mouseY - app.draggedComponent.y
     }
+
+    const gridX = Math.floor((mouseX + GridSize) / GridSize)
+    const gridY = Math.floor((mouseY + GridSize) / GridSize)
+    app.wirePlacement = [gridX, gridY, gridX, gridY]
 
     app.isHolding = true
 }
@@ -491,6 +527,10 @@ const handleMouseUp = (event: MouseEvent) => {
         } else {
             app.selectedComponent = component
         }
+    }
+
+    if (app.wirePlacement.length > 0) {
+        app.wirePlacement.length = 0
     }
 
     app.isHolding = false
