@@ -22,12 +22,14 @@ interface LED extends ComponentBasic {
 
 type Component = OnOffSwitch | LED
 type ComponentType = Component["type"]
+type Wire = number[]
 
 interface App {
     canvas: HTMLCanvasElement
     ctx: CanvasRenderingContext2D
     componentsBuffer: Component[]
     components: Record<number, Component>
+    wires: Wire[][]
     hoveredComponent: Component | null
     selectedComponent: Component | null
     draggedComponent: Component | null
@@ -69,6 +71,7 @@ const create = () => {
         ctx,
         componentsBuffer: [],
         components: {},
+        wires: [],
         hoveredComponent: null,
         selectedComponent: null,
         draggedComponent: null,
@@ -88,6 +91,11 @@ const create = () => {
     app.componentsBuffer.push(createComponent("led", 300, 160))
 
     connectToComponent(app.components[1], app.components[2], 0, 0)
+
+    app.wires.push([
+        [100, 140],
+        [200, 140],
+    ])
 }
 
 const createComponent = (type: ComponentType, x: number, y: number): Component => {
@@ -145,9 +153,13 @@ const render = () => {
     app.ctx.fillStyle = "rgb(229 231 235)"
     app.ctx.fillRect(0, 0, app.canvas.width, app.canvas.height)
 
-    drawGrid()
+    renderGrid()
 
     app.ctx.translate(app.camera.x, app.camera.y)
+
+    for (const wire of app.wires) {
+        renderWire(wire)
+    }
 
     for (const component of app.componentsBuffer) {
         renderComponent(component)
@@ -163,7 +175,7 @@ const render = () => {
     requestAnimationFrame(render)
 }
 
-const drawGrid = () => {
+const renderGrid = () => {
     const { ctx, camera, canvas } = app
 
     ctx.beginPath()
@@ -183,6 +195,25 @@ const drawGrid = () => {
     for (let y = offsetY; y < canvas.height; y += GridSize) {
         ctx.moveTo(0, y)
         ctx.lineTo(canvas.width, y)
+    }
+
+    ctx.stroke()
+    ctx.closePath()
+}
+
+const renderWire = (wire: Wire[]) => {
+    const { ctx } = app
+
+    ctx.beginPath()
+    ctx.strokeStyle = "black"
+    ctx.lineWidth = 2
+
+    const prev = wire[0]
+    ctx.moveTo(prev[0], prev[1])
+
+    for (let i = 1; i < wire.length; i++) {
+        const next = wire[i]
+        ctx.lineTo(next[0], next[1])
     }
 
     ctx.stroke()
