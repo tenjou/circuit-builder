@@ -1,9 +1,13 @@
+interface Pin {}
+
 interface ComponentBasic {
     id: number
     x: number
     y: number
     width: number
     height: number
+    out: Pin[]
+    in: Pin[]
 }
 
 interface OnOffSwitch extends ComponentBasic {
@@ -11,14 +15,19 @@ interface OnOffSwitch extends ComponentBasic {
     isOn: boolean
 }
 
-type Component = OnOffSwitch
+interface LED extends ComponentBasic {
+    type: "led"
+    isOn: boolean
+}
+
+type Component = OnOffSwitch | LED
 type ComponentType = Component["type"]
 
 interface App {
     canvas: HTMLCanvasElement
     ctx: CanvasRenderingContext2D
-    components: Component[]
-    componentsMap: Map<number, Component>
+    componentsBuffer: Component[]
+    components: Record<number, Component>
     hoveredComponent: Component | null
     selectedComponent: Component | null
     draggedComponent: Component | null
@@ -58,8 +67,8 @@ const create = () => {
     app = {
         canvas,
         ctx,
-        components: [],
-        componentsMap: new Map(),
+        componentsBuffer: [],
+        components: {},
         hoveredComponent: null,
         selectedComponent: null,
         draggedComponent: null,
@@ -74,8 +83,9 @@ const create = () => {
         lastComponentId: 0,
     }
 
-    app.components.push(createComponent("on-off-switch", 100, 100))
-    app.components.push(createComponent("on-off-switch", 100, 160))
+    app.componentsBuffer.push(createComponent("on-off-switch", 100, 100))
+    app.componentsBuffer.push(createComponent("on-off-switch", 100, 160))
+    app.componentsBuffer.push(createComponent("led", 300, 160))
 }
 
 const createComponent = (type: ComponentType, x: number, y: number): Component => {
@@ -91,6 +101,21 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
                 width: 40,
                 height: 40,
                 isOn: false,
+                in: [],
+                out: [-1, -1],
+            }
+
+        case "led":
+            return {
+                id,
+                type,
+                x,
+                y,
+                width: 40,
+                height: 40,
+                isOn: false,
+                in: [-1],
+                out: [],
             }
     }
 }
@@ -105,7 +130,7 @@ const render = () => {
 
     app.ctx.translate(app.camera.x, app.camera.y)
 
-    for (const component of app.components) {
+    for (const component of app.componentsBuffer) {
         renderComponent(component)
     }
 
@@ -147,43 +172,61 @@ const drawGrid = () => {
 
 const renderComponent = (component: Component) => {
     const ctx = app.ctx
-    const width = 40
-    const height = 40
-
-    ctx.beginPath()
-    ctx.fillStyle = "black"
-    ctx.strokeStyle = "black"
-    ctx.lineWidth = 2
-    ctx.roundRect(component.x, component.y, width, height, 3)
-    ctx.stroke()
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
 
     switch (component.type) {
-        case "on-off-switch":
-            renderCircle(component.x, component.y, 14, component.isOn ? "rgb(125 211 252)" : "rgb(155, 155, 155)")
+        case "led": {
+            const halfWidth = component.width / 2
+            const halfHeight = component.height / 2
+            renderCircle(component.x + halfWidth, component.y + halfHeight, 20, component.isOn ? "rgb(125 211 252)" : "rgb(155, 155, 155)")
+            break
+        }
+
+        case "on-off-switch": {
+            const halfWidth = component.width / 2
+            const halfHeight = component.height / 2
 
             ctx.beginPath()
+            ctx.fillStyle = "black"
             ctx.strokeStyle = "black"
             ctx.lineWidth = 2
-            ctx.moveTo(component.x + 41, component.y + 20)
-            ctx.lineTo(component.x + 141, component.y + 20)
+            ctx.roundRect(component.x, component.y, component.width, component.height, 3)
             ctx.stroke()
 
-            if (component.isOn) {
-                ctx.globalAlpha = 0.5
-                ctx.beginPath()
-                ctx.strokeStyle = "rgb(56 189 248)"
-                ctx.lineWidth = 6
-                ctx.moveTo(component.x + 41, component.y + 20)
-                ctx.lineTo(component.x + 141, component.y + 20)
-                ctx.stroke()
-                ctx.globalAlpha = 1
-            }
+            renderCircle(component.x + halfWidth, component.y + halfHeight, 14, component.isOn ? "rgb(125 211 252)" : "rgb(155, 155, 155)")
+
+            // ctx.beginPath()
+            // ctx.strokeStyle = "black"
+            // ctx.lineWidth = 2
+            // ctx.moveTo(component.x + 41, component.y + 20)
+            // ctx.lineTo(component.x + 141, component.y + 20)
+            // ctx.stroke()
+
+            // if (component.isOn) {
+            //     ctx.globalAlpha = 0.5
+            //     ctx.beginPath()
+            //     ctx.strokeStyle = "rgb(56 189 248)"
+            //     ctx.lineWidth = 6
+            //     ctx.moveTo(component.x + 41, component.y + 20)
+            //     ctx.lineTo(component.x + 141, component.y + 20)
+            //     ctx.stroke()
+            //     ctx.globalAlpha = 1
+            // }
+
             break
+        }
     }
 
-    ctx.closePath()
+    if (component.in.length > 0) {
+        const pinX = component.x - 1
+        const pinY = component.y + 20
+        renderCircle(pinX, pinY, 4, "black")
+    }
+
+    if (component.out.length > 0) {
+        const pinX = component.x + component.width + 1
+        const pinY = component.y + 20
+        renderCircle(pinX, pinY, 4, "black")
+    }
 }
 
 const renderComponentHighlight = (component: Component, alpha = 1) => {
@@ -208,14 +251,9 @@ const renderCircle = (x: number, y: number, radius: number, color = "rgb(155, 15
     ctx.strokeStyle = "rgb(45, 45, 45)"
     ctx.fillStyle = color
     ctx.lineWidth = 2
-    ctx.arc(x + radius + 20 - radius, y + radius + 20 - radius, radius, 0, 2 * Math.PI)
+    ctx.arc(x, y, radius, 0, 2 * Math.PI)
     ctx.fill()
     ctx.stroke()
-}
-
-const renderOnOffSwitch = (component: OnOffSwitch) => {
-    renderCircle(100, 200, 16)
-    renderCircle(120, 200, 6)
 }
 
 const interactWithComponent = (component: Component) => {
@@ -229,7 +267,7 @@ const isInside = (component: Component, x: number, y: number) => {
 }
 
 const getComponentAt = (x: number, y: number) => {
-    for (const component of app.components) {
+    for (const component of app.componentsBuffer) {
         if (isInside(component, x, y)) {
             return component
         }
