@@ -38,7 +38,7 @@ interface App {
         pins: Record<number, number>
     }
     hoveredPin: {
-        componentedId?: number
+        componentedId: number
         gridX: number
         gridY: number
     }
@@ -59,6 +59,7 @@ interface App {
 
 const GridSize = 20
 const GridIndexSize = 1000
+const PinRadius = 6
 
 let app: App = {} as App
 
@@ -88,7 +89,7 @@ const create = () => {
         wires: [],
         pins: {},
         hoveredPin: {
-            componentedId: undefined,
+            componentedId: 0,
             gridX: 0,
             gridY: 0,
         },
@@ -107,7 +108,7 @@ const create = () => {
             x: 0,
             y: 0,
         },
-        lastComponentId: 0,
+        lastComponentId: 1,
         wirePlacement: [],
     }
 
@@ -115,7 +116,7 @@ const create = () => {
     app.componentsBuffer.push(createComponent("on-off-switch", 100, 160))
     app.componentsBuffer.push(createComponent("led", 300, 160))
 
-    connectToComponent(app.components[1], app.components[2], 0, 0)
+    connectToComponent(app.components[1], app.components[3], 0, 0)
 
     app.wires.push([2, 3, 5, 3])
 }
@@ -136,7 +137,7 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
                 height: 40,
                 isOn: false,
                 in: [],
-                out: [-1],
+                out: [0],
             }
             break
 
@@ -149,7 +150,7 @@ const createComponent = (type: ComponentType, x: number, y: number): Component =
                 width: 40,
                 height: 40,
                 isOn: false,
-                in: [-1],
+                in: [0],
                 out: [],
             }
             break
@@ -224,7 +225,7 @@ const moveComponent = (component: Component, x: number, y: number) => {
 }
 
 const connectToComponent = (from: Component, to: Component, fromPinIndex: number, toPinIndex: number) => {
-    console.log("Connecting", from, to, fromPinIndex, toPinIndex)
+    console.log("Connecting from:", from, "to:", to, fromPinIndex, toPinIndex)
 
     from.out[fromPinIndex] = to.id
     to.in[toPinIndex] = from.id
@@ -255,7 +256,7 @@ const render = () => {
         renderComponentHighlight(app.selectedComponent, 0.5)
     }
 
-    if (app.hoveredPin.componentedId !== undefined) {
+    if (app.hoveredPin.componentedId) {
         renderPinHiglight()
     } else {
         if (app.hoveredComponent) {
@@ -383,7 +384,7 @@ const renderPinHiglight = () => {
     ctx.beginPath()
     ctx.strokeStyle = "rgb(255, 0, 0)"
     ctx.lineWidth = 2
-    ctx.arc(x, y, 6, 0, 2 * Math.PI)
+    ctx.arc(x, y, PinRadius, 0, 2 * Math.PI)
     ctx.stroke()
 }
 
@@ -407,11 +408,11 @@ const interactWithComponent = (component: Component) => {
     component.isOn = !component.isOn
 
     for (const pin of component.out) {
-        if (pin === -1) {
+        if (pin === 0) {
             continue
         }
 
-        const connectedComponent = app.componentsBuffer[pin as number]
+        const connectedComponent = app.components[pin]
         connectedComponent.isOn = component.isOn
     }
 }
@@ -436,15 +437,25 @@ const handleMouseMove = (event: MouseEvent) => {
     const mouseX = event.clientX - app.camera.x
     const mouseY = event.clientY - app.camera.y
 
+    // Check if we are hovering over a pin
     const gridX = Math.floor((mouseX + GridSize * 0.5) / GridSize)
     const gridY = Math.floor((mouseY + GridSize * 0.5) / GridSize)
     const pinGridId = gridX + gridY * GridIndexSize
 
-    app.hoveredPin.componentedId = app.collisions.pins[pinGridId]
-    if (app.hoveredPin.componentedId !== undefined) {
-        app.hoveredPin.gridX = gridX
-        app.hoveredPin.gridY = gridY
-    } else {
+    let hoveredPin = app.collisions.pins[pinGridId]
+    if (hoveredPin) {
+        const offsetFromCenterX = mouseX - gridX * GridSize
+        const offsetFromCenterY = mouseY - gridY * GridSize
+        const isHoveringPin = offsetFromCenterX * offsetFromCenterX + offsetFromCenterY * offsetFromCenterY < PinRadius * PinRadius
+        hoveredPin = isHoveringPin ? hoveredPin : 0
+    }
+
+    app.hoveredPin.componentedId = hoveredPin
+    app.hoveredPin.gridX = gridX
+    app.hoveredPin.gridY = gridY
+
+    // Check if we are hovering over a component
+    if (!app.hoveredPin.componentedId) {
         app.hoveredComponent = getComponentAt(mouseX, mouseY)
 
         if (app.isHolding) {
@@ -491,7 +502,7 @@ const handleMouseMove = (event: MouseEvent) => {
         }
     }
 
-    app.canvas.style.cursor = app.hoveredComponent || app.hoveredPin.componentedId !== undefined ? "pointer" : "default"
+    app.canvas.style.cursor = app.hoveredComponent || app.hoveredPin.componentedId ? "pointer" : "default"
 }
 
 const handleMouseDown = (event: MouseEvent) => {
