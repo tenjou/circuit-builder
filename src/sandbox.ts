@@ -4,6 +4,11 @@ export type Brand<T, FlavorT> = T & {
 
 export type ComponentId = Brand<string, "ComponentId">
 
+interface App {
+    components: Record<ComponentId, Component>
+    lastComponentId: number
+}
+
 interface Pin {
     componentId: ComponentId | null
     pinId: number
@@ -36,8 +41,7 @@ interface Led extends BasicComponent {
 type Component = OnOffSwitch | Led | And | Not
 type ComponentType = Component["type"]
 
-const components: Record<string, Component> = {}
-let lastComponentId = 1
+let app: App = {} as App
 
 const createPins = (num: number): Pin[] => {
     const pins: Pin[] = []
@@ -54,7 +58,7 @@ const createPins = (num: number): Pin[] => {
 }
 
 const createComponent = (type: ComponentType): Component => {
-    const id = (lastComponentId++).toString()
+    const id = (app.lastComponentId++).toString()
 
     let component: Component
 
@@ -94,7 +98,7 @@ const createComponent = (type: ComponentType): Component => {
             break
     }
 
-    components[id] = component
+    app.components[id] = component
 
     return component
 }
@@ -137,7 +141,7 @@ const togglePin = (component: Component, pinId: number, current: number) => {
 
     pinOut.current = current
 
-    const pinTargetComponent = components[pinOut.componentId]
+    const pinTargetComponent = app.components[pinOut.componentId]
     const pinIn = pinTargetComponent.pins[pinOut.pinId]
     if (pinIn.current === current || pinIn.componentId === null) {
         return false
@@ -180,6 +184,8 @@ const allPinsConnected = (component: Component) => {
 }
 
 const test = () => {
+    create()
+
     const switchA = createComponent("on-off-switch")
     const switchB = createComponent("on-off-switch")
     const and = createComponent("and")
@@ -201,12 +207,36 @@ const test = () => {
     interactWithComponent(switchA)
     console.log("Led:", led.isActive)
 
+    save()
+
     // interactWithComponent(switchB)
     // console.log("Led:", led.isActive)
 }
 
+const create = () => {
+    app = {
+        components: {},
+        lastComponentId: 1,
+    }
+}
+
+const save = () => {
+    const json = JSON.stringify(app)
+    localStorage.setItem("app", json)
+}
+
+const load = () => {
+    const data = localStorage.getItem("app")
+    if (data === null) {
+        throw new Error("No data found")
+    }
+
+    app = JSON.parse(data)
+}
+
 try {
     test()
+    // load()
 } catch (e) {
     if (e instanceof Error) console.log(e.message)
 }
