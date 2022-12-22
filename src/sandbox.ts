@@ -13,22 +13,27 @@ interface Pin {
 interface BasicComponent {
     id: ComponentId
     pins: Pin[]
-    isActive: boolean
 }
 
 interface OnOffSwitch extends BasicComponent {
     type: "on-off-switch"
+    isActive: boolean
 }
 
 interface And extends BasicComponent {
     type: "and"
 }
 
-interface Led extends BasicComponent {
-    type: "led"
+interface Not extends BasicComponent {
+    type: "not"
 }
 
-type Component = OnOffSwitch | Led | And
+interface Led extends BasicComponent {
+    type: "led"
+    isActive: boolean
+}
+
+type Component = OnOffSwitch | Led | And | Not
 type ComponentType = Component["type"]
 
 const components: Record<string, Component> = {}
@@ -77,7 +82,14 @@ const createComponent = (type: ComponentType): Component => {
                 id,
                 type,
                 pins: createPins(3),
-                isActive: false,
+            }
+            break
+
+        case "not":
+            component = {
+                id,
+                type,
+                pins: createPins(2),
             }
             break
     }
@@ -98,12 +110,22 @@ const connectComponent = (component: Component, pinId: number, otherComponent: C
 
     otherComponent.pins[otherPinId].componentId = component.id
     otherComponent.pins[otherPinId].pinId = pinId
+
+    if (allPinsConnected(component)) {
+        updateComponent(component)
+    }
+    if (allPinsConnected(otherComponent)) {
+        updateComponent(otherComponent)
+    }
 }
 
 const interactWithComponent = (component: Component) => {
     if (component.type === "on-off-switch") {
         component.isActive = !component.isActive
-        togglePin(component, 0, 1)
+
+        const current = component.isActive ? 1 : 0
+
+        togglePin(component, 0, current)
     }
 }
 
@@ -134,6 +156,12 @@ const updateComponent = (component: Component) => {
         const result = pinA.current && pinB.current
 
         togglePin(component, 2, result)
+    } else if (component.type === "not") {
+        const pinA = component.pins[0]
+
+        const result = pinA.current === 0 ? 1 : 0
+
+        togglePin(component, 1, result)
     } else if (component.type === "led") {
         const isActive = component.pins[0].current === 1
 
@@ -141,21 +169,40 @@ const updateComponent = (component: Component) => {
     }
 }
 
+const allPinsConnected = (component: Component) => {
+    for (const pin of component.pins) {
+        if (pin.componentId === null) {
+            return false
+        }
+    }
+
+    return true
+}
+
 const test = () => {
     const switchA = createComponent("on-off-switch")
     const switchB = createComponent("on-off-switch")
     const and = createComponent("and")
-    const led = createComponent("led")
+    const not = createComponent("not")
+    const led = createComponent("led") as Led
 
-    connectComponent(switchA, 0, and, 0)
-    connectComponent(switchB, 0, and, 1)
-    connectComponent(and, 2, led, 0)
+    // connectComponent(switchA, 0, and, 0)
+    // connectComponent(switchB, 0, and, 1)
+    // connectComponent(and, 2, led, 0)
+
+    connectComponent(switchA, 0, not, 0)
+    connectComponent(not, 1, led, 0)
+
+    console.log("Led:", led.isActive)
 
     interactWithComponent(switchA)
     console.log("Led:", led.isActive)
 
-    interactWithComponent(switchB)
+    interactWithComponent(switchA)
     console.log("Led:", led.isActive)
+
+    // interactWithComponent(switchB)
+    // console.log("Led:", led.isActive)
 }
 
 try {
