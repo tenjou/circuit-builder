@@ -1,45 +1,8 @@
-export type Brand<T, FlavorT> = T & {
-    _type?: FlavorT
-}
-
-export type ComponentId = Brand<string, "ComponentId">
+import { Block, Component, ComponentType, Led, Pin } from "./component"
 
 interface App {
-    components: Record<ComponentId, Component>
-    lastComponentId: number
+    block: Block
 }
-
-interface Pin {
-    componentId: ComponentId | null
-    pinId: number
-    current: number
-}
-
-interface BasicComponent {
-    id: ComponentId
-    pins: Pin[]
-}
-
-interface OnOffSwitch extends BasicComponent {
-    type: "on-off-switch"
-    isActive: boolean
-}
-
-interface And extends BasicComponent {
-    type: "and"
-}
-
-interface Not extends BasicComponent {
-    type: "not"
-}
-
-interface Led extends BasicComponent {
-    type: "led"
-    isActive: boolean
-}
-
-type Component = OnOffSwitch | Led | And | Not
-type ComponentType = Component["type"]
 
 let app: App = {} as App
 
@@ -58,7 +21,8 @@ const createPins = (num: number): Pin[] => {
 }
 
 const createComponent = (type: ComponentType): Component => {
-    const id = (app.lastComponentId++).toString()
+    const { block } = app
+    const id = (block.lastComponentId++).toString()
 
     let component: Component
 
@@ -96,9 +60,12 @@ const createComponent = (type: ComponentType): Component => {
                 pins: createPins(2),
             }
             break
+
+        default:
+            throw new Error("Unsupported component type: " + type)
     }
 
-    app.components[id] = component
+    block.components[id] = component
 
     return component
 }
@@ -141,7 +108,7 @@ const togglePin = (component: Component, pinId: number, current: number) => {
 
     pinOut.current = current
 
-    const pinTargetComponent = app.components[pinOut.componentId]
+    const pinTargetComponent = app.block.components[pinOut.componentId]
     const pinIn = pinTargetComponent.pins[pinOut.pinId]
     if (pinIn.current === current || pinIn.componentId === null) {
         return false
@@ -215,8 +182,13 @@ const test = () => {
 
 const create = () => {
     app = {
-        components: {},
-        lastComponentId: 1,
+        block: {
+            id: "0",
+            type: "block",
+            components: {},
+            lastComponentId: 1,
+            pins: [],
+        },
     }
 }
 
