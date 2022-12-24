@@ -33,11 +33,84 @@ export interface Led extends BasicComponent {
     isActive: boolean
 }
 
-export interface Block extends BasicComponent {
-    type: "block"
+export interface Circuit extends BasicComponent {
+    type: "circuit"
     components: Record<ComponentId, Component>
     lastComponentId: number
 }
 
-export type Component = OnOffSwitch | Led | And | Not | Block
+export type Component = OnOffSwitch | Led | And | Not | Circuit
 export type ComponentType = Component["type"]
+
+let circuit: Circuit = {
+    id: "0",
+    type: "circuit",
+    components: {},
+    lastComponentId: 1,
+    pins: [],
+}
+
+export const createPins = (num: number): Pin[] => {
+    const pins: Pin[] = []
+
+    for (let i = 0; i < num; i++) {
+        pins.push({
+            componentId: null,
+            pinId: i,
+            current: 0,
+        })
+    }
+
+    return pins
+}
+
+export const createComponent = (type: ComponentType): Component => {
+    const id = (circuit.lastComponentId++).toString()
+
+    let component: Component
+
+    switch (type) {
+        case "on-off-switch":
+            component = {
+                id,
+                type,
+                pins: createPins(1),
+                isActive: false,
+            }
+            break
+
+        case "led":
+            component = {
+                id,
+                type,
+                pins: createPins(1),
+                isActive: false,
+            }
+            break
+
+        case "and":
+            component = {
+                id,
+                type,
+                pins: createPins(3),
+            }
+            break
+
+        case "not":
+            component = {
+                id,
+                type,
+                pins: createPins(2),
+            }
+            break
+
+        default:
+            throw new Error("Unsupported component type: " + type)
+    }
+
+    circuit.components[id] = component
+
+    return component
+}
+
+export const getComponent = (id: ComponentId): Component => circuit.components[id]

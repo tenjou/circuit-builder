@@ -1,74 +1,10 @@
-import { Block, Component, ComponentType, Led, Pin } from "./component"
+import { Circuit, Component, ComponentType, createComponent, Led, Pin } from "./component"
 
 interface App {
-    block: Block
+    block: Circuit
 }
 
 let app: App = {} as App
-
-const createPins = (num: number): Pin[] => {
-    const pins: Pin[] = []
-
-    for (let i = 0; i < num; i++) {
-        pins.push({
-            componentId: null,
-            pinId: i,
-            current: 0,
-        })
-    }
-
-    return pins
-}
-
-const createComponent = (type: ComponentType): Component => {
-    const { block } = app
-    const id = (block.lastComponentId++).toString()
-
-    let component: Component
-
-    switch (type) {
-        case "on-off-switch":
-            component = {
-                id,
-                type,
-                pins: createPins(1),
-                isActive: false,
-            }
-            break
-
-        case "led":
-            component = {
-                id,
-                type,
-                pins: createPins(1),
-                isActive: false,
-            }
-            break
-
-        case "and":
-            component = {
-                id,
-                type,
-                pins: createPins(3),
-            }
-            break
-
-        case "not":
-            component = {
-                id,
-                type,
-                pins: createPins(2),
-            }
-            break
-
-        default:
-            throw new Error("Unsupported component type: " + type)
-    }
-
-    block.components[id] = component
-
-    return component
-}
 
 const connectComponent = (component: Component, pinId: number, otherComponent: Component, otherPinId: number) => {
     const componentToPin = component.pins[pinId]
@@ -174,7 +110,7 @@ const test = () => {
     interactWithComponent(switchA)
     console.log("Led:", led.isActive)
 
-    save()
+    // save()
 
     // interactWithComponent(switchB)
     // console.log("Led:", led.isActive)
@@ -184,26 +120,12 @@ const create = () => {
     app = {
         block: {
             id: "0",
-            type: "block",
+            type: "circuit",
             components: {},
             lastComponentId: 1,
             pins: [],
         },
     }
-}
-
-const save = () => {
-    const json = JSON.stringify(app)
-    localStorage.setItem("app", json)
-}
-
-const load = () => {
-    const data = localStorage.getItem("app")
-    if (data === null) {
-        throw new Error("No data found")
-    }
-
-    app = JSON.parse(data)
 }
 
 try {
