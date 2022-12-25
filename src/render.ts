@@ -5,6 +5,7 @@ import { Entity, getEntities } from "./entity"
 
 let canvas: HTMLCanvasElement
 let ctx: CanvasRenderingContext2D
+let hoveredEntity: Entity | null = null
 
 export const createRenderer = () => {
     canvas = document.getElementById("canvas") as HTMLCanvasElement
@@ -37,6 +38,10 @@ export const render = () => {
 
     ctx.translate(camera.x, camera.y)
 
+    if (hoveredEntity) {
+        renderEntityHover(hoveredEntity)
+    }
+
     for (const entity of entities) {
         renderEntity(entity)
     }
@@ -53,10 +58,11 @@ const renderEntity = (entity: Entity) => {
             const halfHeight = entity.height / 2
 
             ctx.beginPath()
-            ctx.fillStyle = "black"
+            ctx.fillStyle = "white"
             ctx.strokeStyle = "black"
             ctx.lineWidth = 2
             ctx.roundRect(entity.x, entity.y, entity.width, entity.height, 3)
+            ctx.fill()
             ctx.stroke()
             break
     }
@@ -96,4 +102,21 @@ const renderGrid = () => {
 
     ctx.stroke()
     ctx.closePath()
+}
+
+const renderEntityHover = (entity: Entity) => {
+    const offset = 5
+
+    ctx.beginPath()
+    ctx.globalAlpha = 0.4
+    ctx.fillStyle = "rgb(150, 150, 150)"
+    ctx.roundRect(entity.x - offset, entity.y - offset, entity.width + offset * 2, entity.height + offset * 2, 3)
+    ctx.fill()
+    ctx.closePath()
+
+    ctx.globalAlpha = 1
+}
+
+export const setHoveredEntity = (entity: Entity | null) => {
+    hoveredEntity = entity
 }

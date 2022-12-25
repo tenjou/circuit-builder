@@ -1,9 +1,9 @@
-import { createRenderer, render } from "./render"
+import { createRenderer, render, setHoveredEntity } from "./render"
 import { Circuit, ComponentType, createComponent } from "./component"
 import { uuid } from "./utils/uuid"
-import { createEntity, Entity } from "./entity"
+import { createEntity, Entity, getEntityAt } from "./entity"
 import { GridSize } from "./config"
-import { moveCamera } from "./camera"
+import { getCamera, moveCamera } from "./camera"
 
 // interface Pin {
 //     pinIndex: number
@@ -378,20 +378,6 @@ import { moveCamera } from "./camera"
 //     }
 // }
 
-// const getComponentAt = (x: number, y: number) => {
-//     const gridX = Math.floor(x / GridSize)
-//     const gridY = Math.floor(y / GridSize)
-//     const gridId = gridX + gridY * GridIndexSize
-
-//     const componentId = app.collisions.components[gridId]
-//     if (componentId !== undefined) {
-//         const component = app.components[componentId]
-//         return component
-//     }
-
-//     return null
-// }
-
 // const updateHoveredPin = (mouseX: number, mouseY: number) => {
 //     const gridX = Math.floor((mouseX + GridSize * 0.5) / GridSize)
 //     const gridY = Math.floor((mouseY + GridSize * 0.5) / GridSize)
@@ -591,6 +577,15 @@ const handleMouseUp = (event: MouseEvent) => {
 }
 
 const handleMouseMove = (event: MouseEvent) => {
+    const camera = getCamera()
+
+    const mouseX = event.clientX - camera.x
+    const mouseY = event.clientY - camera.y
+
+    const hoveredEntity = getEntityAt(mouseX, mouseY)
+    setHoveredEntity(hoveredEntity)
+    document.body.style.cursor = hoveredEntity ? "pointer" : "default"
+
     if (state.isDragging) {
         moveCamera(event.movementX, event.movementY)
     }
