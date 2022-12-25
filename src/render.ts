@@ -1,11 +1,7 @@
+import { getCamera } from "./camera"
 import { getComponent } from "./component"
 import { GridSize } from "./config"
 import { Entity, getEntities } from "./entity"
-
-const camera = {
-    x: 0,
-    y: 0,
-}
 
 let canvas: HTMLCanvasElement
 let ctx: CanvasRenderingContext2D
@@ -30,6 +26,7 @@ export const createRenderer = () => {
 
 export const render = () => {
     const entities = getEntities()
+    const camera = getCamera()
 
     ctx.resetTransform()
 
@@ -76,6 +73,8 @@ const renderCircle = (x: number, y: number, radius: number, color = "rgb(155, 15
 }
 
 const renderGrid = () => {
+    const camera = getCamera()
+
     ctx.beginPath()
     ctx.strokeStyle = "rgb(200, 200, 200)"
     ctx.lineWidth = 1

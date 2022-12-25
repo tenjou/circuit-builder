@@ -3,6 +3,7 @@ import { Circuit, ComponentType, createComponent } from "./component"
 import { uuid } from "./utils/uuid"
 import { createEntity, Entity } from "./entity"
 import { GridSize } from "./config"
+import { moveCamera } from "./camera"
 
 // interface Pin {
 //     pinIndex: number
@@ -76,9 +77,6 @@ import { GridSize } from "./config"
 //     canvas.width = window.innerWidth
 //     canvas.height = window.innerHeight
 // })
-//     window.addEventListener("mousemove", handleMouseMove)
-//     window.addEventListener("mousedown", handleMouseDown)
-//     window.addEventListener("mouseup", handleMouseUp)
 
 //     app = {
 //         canvas,
@@ -566,23 +564,61 @@ import { GridSize } from "./config"
 interface App {
     id: string
     name: string
-    circuit: Circuit
-    entities: Entity[]
 }
 
-const app: App = {} as App
+interface AppState {
+    isDragging: boolean
+}
+
+let app: App = {} as App
+let state: AppState = {} as AppState
 
 const addComponent = (componentType: ComponentType, x: number, y: number) => {
     const component = createComponent(componentType)
     createEntity(component.id, x, y)
 }
 
-try {
+const handleMouseDown = (event: MouseEvent) => {
+    if (event.button === 0) {
+        state.isDragging = true
+    }
+}
+
+const handleMouseUp = (event: MouseEvent) => {
+    if (event.button === 0) {
+        state.isDragging = false
+    }
+}
+
+const handleMouseMove = (event: MouseEvent) => {
+    if (state.isDragging) {
+        moveCamera(event.movementX, event.movementY)
+    }
+}
+
+const start = () => {
+    app = {
+        id: uuid(),
+        name: "Untitled",
+    }
+
+    state = {
+        isDragging: false,
+    }
+
     createRenderer()
 
     addComponent("on-off-switch", 100, 100)
 
+    window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("mousedown", handleMouseDown)
+    window.addEventListener("mouseup", handleMouseUp)
+
     requestAnimationFrame(render)
+}
+
+try {
+    start()
 } catch (err) {
     console.error(err)
 }
