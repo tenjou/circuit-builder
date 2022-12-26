@@ -1,4 +1,5 @@
 import { ComponentId, getComponent } from "./component"
+import { ComponentConfigs } from "./component-config"
 import { GridIndexSize, GridSize } from "./config"
 
 export interface Entity {
@@ -20,23 +21,14 @@ let collisions: Collisions = {
 
 export const createEntity = (componentId: ComponentId, x: number, y: number): Entity => {
     const component = getComponent(componentId)
-
-    let width = GridSize
-    let height = GridSize
-
-    switch (component.type) {
-        default:
-            width = GridSize * 2
-            height = GridSize * 2
-            break
-    }
+    const componentConfig = ComponentConfigs[component.type]
 
     const entity: Entity = {
         componentId,
         x,
         y,
-        width,
-        height,
+        width: componentConfig.width,
+        height: componentConfig.height,
     }
 
     entities.push(entity)
