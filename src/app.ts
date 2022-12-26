@@ -369,6 +369,7 @@ const start = () => {
     const switchB = addComponent("on-off-switch", 100, 220)
     const and = addComponent("and", 220, 160)
     const not = addComponent("not", 340, 160)
+    const led = addComponent("led", 480, 160)
 
     window.addEventListener("mousemove", handleMouseMove)
     window.addEventListener("mousedown", handleMouseDown)

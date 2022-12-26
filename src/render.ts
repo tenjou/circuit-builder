@@ -54,6 +54,9 @@ const renderEntity = (entity: Entity) => {
     const component = getComponent(entity.componentId)
     const componentConfig = ComponentConfigs[component.type]
 
+    const halfWidth = entity.width / 2
+    const halfHeight = entity.height / 2
+
     switch (component.type) {
         default:
             ctx.beginPath()
@@ -66,11 +69,37 @@ const renderEntity = (entity: Entity) => {
             break
     }
 
+    if (componentConfig.in > 0) {
+        for (let i = 0; i < componentConfig.in; i += 1) {
+            const x = entity.x - 10
+            const y = entity.y + halfHeight + (i - (componentConfig.in - 1) / 2) * 20
+            renderLine(entity.x, y, x, y)
+            renderCircle(x, y, 4, "rgb(255, 255, 255)")
+        }
+    }
+    if (componentConfig.out > 0) {
+        for (let i = 0; i < componentConfig.out; i += 1) {
+            const x = entity.x + entity.width + 10
+            const y = entity.y + halfHeight + (i - (componentConfig.out - 1) / 2) * 25
+            renderLine(entity.x + entity.width, y, x, y)
+            renderCircle(x, y, 4, "rgb(255, 255, 255)")
+        }
+    }
+
     if (componentConfig.label) {
-        const centerX = entity.x + entity.width / 2
-        const centerY = entity.y + entity.height / 2
+        const centerX = entity.x + halfWidth
+        const centerY = entity.y + halfHeight
         renderText(componentConfig.label, centerX, centerY)
     }
+}
+
+const renderLine = (x1: number, y1: number, x2: number, y2: number, color = "rgb(45, 45, 45)") => {
+    ctx.beginPath()
+    ctx.strokeStyle = color
+    ctx.lineWidth = 2
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.stroke()
 }
 
 const renderCircle = (x: number, y: number, radius: number, color = "rgb(155, 155, 155)") => {
