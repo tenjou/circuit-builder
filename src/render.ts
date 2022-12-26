@@ -1,7 +1,7 @@
 import { getCamera } from "./camera"
 import { getComponent, getPin } from "./component"
 import { ComponentConfigs } from "./component-config"
-import { GridSize } from "./app-config"
+import { CellSize, GridSize } from "./app-config"
 import { Entity, getEntities, getEntity, getWires } from "./entity"
 
 let canvas: HTMLCanvasElement
@@ -154,15 +154,15 @@ const renderGrid = () => {
 
     const signX = -Math.sign(camera.x)
     const signY = -Math.sign(camera.y)
-    const offsetX = signX * GridSize - Math.abs(camera.x % GridSize) * signX
-    const offsetY = signY * GridSize - Math.abs(camera.y % GridSize) * signY
+    const offsetX = signX * CellSize - Math.abs(camera.x % CellSize) * signX
+    const offsetY = signY * CellSize - Math.abs(camera.y % CellSize) * signY
 
-    for (let x = offsetX; x < canvas.width; x += GridSize) {
+    for (let x = offsetX; x < canvas.width; x += CellSize) {
         ctx.moveTo(x, 0)
         ctx.lineTo(x, canvas.height)
     }
 
-    for (let y = offsetY; y < canvas.height; y += GridSize) {
+    for (let y = offsetY; y < canvas.height; y += CellSize) {
         ctx.moveTo(0, y)
         ctx.lineTo(canvas.width, y)
     }
