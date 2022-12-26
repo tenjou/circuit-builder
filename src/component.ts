@@ -123,7 +123,9 @@ export const connectComponent = (fromComponentId: ComponentId, pinId: number, to
     }
 }
 
-export const interactWithComponent = (component: Component) => {
+export const interactWithComponent = (componentId: ComponentId) => {
+    const component = circuit.components[componentId]
+
     if (component.type === "on-off-switch") {
         component.isActive = !component.isActive
 

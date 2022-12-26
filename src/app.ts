@@ -1,5 +1,5 @@
 import { getCamera, moveCamera } from "./camera"
-import { ComponentId, ComponentType, connectComponent, createComponent } from "./component"
+import { ComponentId, ComponentType, connectComponent, createComponent, interactWithComponent } from "./component"
 import { GridSize } from "./config"
 import { createEntities, createEntity, createWire, Entity, EntityId, getEntity, getEntityAt, moveEntity } from "./entity"
 import { createRenderer, render, setHoveredEntity } from "./render"
@@ -211,12 +211,13 @@ interface App {
 }
 
 interface AppState {
+    draggingEntity: Entity | null
+    draggingOffsetX: number
+    draggingOffsetY: number
+    holdX: number
+    holdY: number
+    isHolding: boolean
     isDragging: boolean
-    dragging: {
-        entity: Entity
-        offsetX: number
-        offsetY: number
-    } | null
 }
 
 let app: App = {} as App
@@ -243,23 +244,27 @@ const handleMouseDown = (event: MouseEvent) => {
     const mouseY = event.clientY - camera.y
 
     if (event.button === 0) {
-        const hoveredEntity = getEntityAt(mouseX, mouseY)
-        if (hoveredEntity) {
-            state.dragging = {
-                entity: hoveredEntity,
-                offsetX: mouseX - hoveredEntity.x,
-                offsetY: mouseY - hoveredEntity.y,
-            }
-        } else {
-            state.isDragging = true
+        state.holdX = event.clientX
+        state.holdY = event.clientY
+        state.isHolding = true
+
+        state.draggingEntity = getEntityAt(mouseX, mouseY)
+        if (state.draggingEntity) {
+            state.draggingOffsetX = mouseX - state.draggingEntity.x
+            state.draggingOffsetY = mouseY - state.draggingEntity.y
         }
     }
 }
 
 const handleMouseUp = (event: MouseEvent) => {
     if (event.button === 0) {
-        state.dragging = null
+        if (!state.isDragging && state.draggingEntity) {
+            interactWithComponent(state.draggingEntity.componentId)
+        }
+
+        state.draggingEntity = null
         state.isDragging = false
+        state.isHolding = false
     }
 }
 
@@ -268,20 +273,22 @@ const handleMouseMove = (event: MouseEvent) => {
     const mouseX = event.clientX - camera.x
     const mouseY = event.clientY - camera.y
 
-    if (state.dragging) {
-        const newX = Math.round((mouseX - state.dragging.offsetX) / GridSize) * GridSize
-        const newY = Math.round((mouseY - state.dragging.offsetY) / GridSize) * GridSize
-        moveEntity(state.dragging.entity, newX, newY)
+    if (!state.isHolding) {
+        const hoveredEntity = getEntityAt(mouseX, mouseY)
+        setHoveredEntity(hoveredEntity)
+        document.body.style.cursor = hoveredEntity ? "pointer" : "default"
         return
     }
 
-    const hoveredEntity = getEntityAt(mouseX, mouseY)
-    setHoveredEntity(hoveredEntity)
-    document.body.style.cursor = hoveredEntity ? "pointer" : "default"
-
-    if (state.isDragging) {
+    if (state.draggingEntity) {
+        const newX = Math.round((mouseX - state.draggingOffsetX) / GridSize) * GridSize
+        const newY = Math.round((mouseY - state.draggingOffsetY) / GridSize) * GridSize
+        moveEntity(state.draggingEntity, newX, newY)
+    } else {
         moveCamera(event.movementX, event.movementY)
     }
+
+    state.isDragging = true
 }
 
 const start = () => {
@@ -291,8 +298,13 @@ const start = () => {
     }
 
     state = {
+        holdX: 0,
+        holdY: 0,
+        isHolding: false,
         isDragging: false,
-        dragging: null,
+        draggingEntity: null,
+        draggingOffsetX: 0,
+        draggingOffsetY: 0,
     }
 
     createRenderer()
