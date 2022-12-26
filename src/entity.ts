@@ -1,8 +1,12 @@
 import { ComponentId, getComponent } from "./component"
 import { ComponentConfigs } from "./component-config"
 import { GridIndexSize, GridSize } from "./config"
+import { Brand } from "./types"
+
+export type EntityId = Brand<string, "EntityId">
 
 export interface Entity {
+    id: EntityId
     componentId: ComponentId
     x: number
     y: number
@@ -10,20 +14,30 @@ export interface Entity {
     height: number
 }
 
-interface Collisions {
-    entities: Record<number, Entity>
+export interface Wire {
+    fromEntityId: EntityId
+    toEntityId: EntityId
 }
 
-let entities: Entity[] = []
-let collisions: Collisions = {
-    entities: {},
+interface EntitiesState {
+    buffer: Entity[]
+    wires: Wire[]
+    lastId: number
+    collisions: {
+        entities: Record<number, Entity>
+    }
 }
+
+let state: EntitiesState = {} as EntitiesState
+let entitiesMap: Record<EntityId, Entity> = {}
 
 export const createEntity = (componentId: ComponentId, x: number, y: number): Entity => {
     const component = getComponent(componentId)
     const componentConfig = ComponentConfigs[component.type]
+    const entityId = (state.lastId++).toString()
 
     const entity: Entity = {
+        id: entityId,
         componentId,
         x,
         y,
@@ -31,11 +45,21 @@ export const createEntity = (componentId: ComponentId, x: number, y: number): En
         height: componentConfig.height,
     }
 
-    entities.push(entity)
+    state.buffer.push(entity)
+    entitiesMap[entityId] = entity
 
     moveEntity(entity, x, y)
 
     return entity
+}
+
+export const createWire = (fromEntityId: EntityId, toEntityId: EntityId) => {
+    const wire: Wire = {
+        fromEntityId,
+        toEntityId,
+    }
+
+    state.wires.push(wire)
 }
 
 export const moveEntity = (entity: Entity, x: number, y: number) => {
@@ -48,7 +72,7 @@ export const moveEntity = (entity: Entity, x: number, y: number) => {
         for (let gridY = prevStartGridY; gridY < prevEndGridY; gridY += 1) {
             for (let gridX = prevStartGridX; gridX < prevEndGridX; gridX += 1) {
                 const gridId = gridX + gridY * GridIndexSize
-                delete collisions.entities[gridId]
+                delete state.collisions.entities[gridId]
             }
         }
     }
@@ -64,7 +88,7 @@ export const moveEntity = (entity: Entity, x: number, y: number) => {
     for (let gridY = startGridY; gridY < endGridY; gridY += 1) {
         for (let gridX = startGridX; gridX < endGridX; gridX += 1) {
             const gridId = gridX + gridY * GridIndexSize
-            collisions.entities[gridId] = entity
+            state.collisions.entities[gridId] = entity
         }
     }
 }
@@ -74,11 +98,34 @@ export const getEntityAt = (x: number, y: number) => {
     const gridY = Math.floor(y / GridSize)
     const gridId = gridX + gridY * GridIndexSize
 
-    const entity = collisions.entities[gridId]
+    const entity = state.collisions.entities[gridId]
 
     return entity || null
 }
 
-export const loadEntities = (newEntities: Entity[]) => (entities = newEntities)
+export const createEntities = () => {
+    state = {
+        buffer: [],
+        wires: [],
+        lastId: 0,
+        collisions: {
+            entities: {},
+        },
+    }
+    entitiesMap = {}
+}
 
-export const getEntities = () => entities
+export const loadEntities = (newState: EntitiesState) => {
+    state = newState
+    entitiesMap = {}
+
+    for (const entity of state.buffer) {
+        entitiesMap[entity.id] = entity
+    }
+}
+
+export const getEntities = () => state.buffer
+
+export const getEntity = (entityId: EntityId) => entitiesMap[entityId]
+
+export const getWires = () => state.wires

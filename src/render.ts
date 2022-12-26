@@ -2,7 +2,7 @@ import { getCamera } from "./camera"
 import { getComponent } from "./component"
 import { ComponentConfigs } from "./component-config"
 import { GridSize } from "./config"
-import { Entity, getEntities } from "./entity"
+import { Entity, getEntities, getEntity, getWires } from "./entity"
 
 let canvas: HTMLCanvasElement
 let ctx: CanvasRenderingContext2D
@@ -28,6 +28,7 @@ export const createRenderer = () => {
 
 export const render = () => {
     const entities = getEntities()
+    const wires = getWires()
     const camera = getCamera()
 
     ctx.resetTransform()
@@ -43,7 +44,16 @@ export const render = () => {
         renderEntityHover(hoveredEntity)
     }
 
-    renderWire(150, 120, 210, 170)
+    for (const wire of wires) {
+        const fromEntity = getEntity(wire.fromEntityId)
+        const toEntity = getEntity(wire.toEntityId)
+        const x1 = fromEntity.x + fromEntity.width / 2
+        const y1 = fromEntity.y + fromEntity.height / 2
+        const x2 = toEntity.x + toEntity.width / 2
+        const y2 = toEntity.y + toEntity.height / 2
+
+        renderWire(x1, y1, x2, y2)
+    }
 
     for (const entity of entities) {
         renderEntity(entity)

@@ -1,7 +1,7 @@
 import { getCamera, moveCamera } from "./camera"
 import { ComponentId, ComponentType, connectComponent, createComponent } from "./component"
 import { GridSize } from "./config"
-import { createEntity, Entity, getEntityAt, moveEntity } from "./entity"
+import { createEntities, createEntity, createWire, Entity, EntityId, getEntity, getEntityAt, moveEntity } from "./entity"
 import { createRenderer, render, setHoveredEntity } from "./render"
 import { uuid } from "./utils/uuid"
 
@@ -61,82 +61,6 @@ import { uuid } from "./utils/uuid"
 //         const pinY = y + component.height / 2
 //         const pinGridId = Math.floor(pinX / GridSize) + Math.floor(pinY / GridSize) * GridIndexSize
 //         app.collisions.pins[pinGridId] = component.id
-//     }
-// }
-
-// const connectToComponent = (from: Component, to: Component, fromPinIndex: number, toPinIndex: number) => {
-//     console.log("Connecting from:", from, "to:", to, fromPinIndex, toPinIndex)
-
-//     from.out[fromPinIndex] = to.id
-//     to.in[toPinIndex] = from.id
-// }
-
-// const renderWire = (wire: number[]) => {
-//     const { ctx } = app
-
-//     ctx.beginPath()
-//     ctx.strokeStyle = "black"
-//     ctx.lineWidth = 4
-
-//     ctx.moveTo(wire[0] * GridSize, wire[1] * GridSize)
-
-//     for (let n = 2; n < wire.length; n += 2) {
-//         ctx.lineTo(wire[n] * GridSize, wire[n + 1] * GridSize)
-//     }
-
-//     ctx.stroke()
-//     ctx.closePath()
-// }
-
-// const renderComponent = (component: Component) => {
-//     const ctx = app.ctx
-
-//     switch (component.type) {
-//         case "led": {
-//             const halfWidth = component.width / 2
-//             const halfHeight = component.height / 2
-//             renderCircle(component.x + halfWidth, component.y + halfHeight, 20, component.isOn ? "rgb(125 211 252)" : "rgb(155, 155, 155)")
-//             break
-//         }
-
-//         case "on-off-switch": {
-// const halfWidth = component.width / 2
-// const halfHeight = component.height / 2
-
-// ctx.beginPath()
-// ctx.fillStyle = "black"
-// ctx.strokeStyle = "black"
-// ctx.lineWidth = 2
-// ctx.roundRect(component.x, component.y, component.width, component.height, 3)
-// ctx.stroke()
-
-//             renderCircle(component.x + halfWidth, component.y + halfHeight, 14, component.isOn ? "rgb(125 211 252)" : "rgb(155, 155, 155)")
-
-//             // if (component.isOn) {
-//             //     ctx.globalAlpha = 0.5
-//             //     ctx.beginPath()
-//             //     ctx.strokeStyle = "rgb(56 189 248)"
-//             //     ctx.lineWidth = 6
-//             //     ctx.moveTo(component.x + 41, component.y + 20)
-//             //     ctx.lineTo(component.x + 141, component.y + 20)
-//             //     ctx.stroke()
-//             //     ctx.globalAlpha = 1
-//             // }
-
-//             break
-//         }
-//     }
-
-//     if (component.in.length > 0) {
-//         const pinX = component.x
-//         const pinY = component.y + 20
-//         renderCircle(pinX, pinY, 4, "black")
-//     }
-
-//     if (component.out.length > 0) {
-//         const pinX = component.x + component.width
-//         const pinY = component.y + 20
-//         renderCircle(pinX, pinY, 4, "black")
 //     }
 // }
 
@@ -298,11 +222,19 @@ interface AppState {
 let app: App = {} as App
 let state: AppState = {} as AppState
 
-const addComponent = (componentType: ComponentType, x: number, y: number): ComponentId => {
+const addComponent = (componentType: ComponentType, x: number, y: number): EntityId => {
     const component = createComponent(componentType)
-    createEntity(component.id, x, y)
+    const entity = createEntity(component.id, x, y)
 
-    return component.id
+    return entity.id
+}
+
+const addConnection = (fromEntityId: EntityId, pinId: number, toEntityId: EntityId, otherPinId: number) => {
+    const fromEntity = getEntity(fromEntityId)
+    const toEntity = getEntity(toEntityId)
+
+    connectComponent(fromEntity.componentId, pinId, toEntity.componentId, otherPinId)
+    createWire(fromEntityId, toEntityId)
 }
 
 const handleMouseDown = (event: MouseEvent) => {
@@ -364,6 +296,7 @@ const start = () => {
     }
 
     createRenderer()
+    createEntities()
 
     const switchA = addComponent("on-off-switch", 100, 100)
     const switchB = addComponent("on-off-switch", 100, 220)
@@ -371,7 +304,10 @@ const start = () => {
     const not = addComponent("not", 340, 160)
     const led = addComponent("led", 480, 160)
 
-    connectComponent(switchA, 0, and, 0)
+    addConnection(switchA, 0, and, 0)
+    addConnection(switchB, 0, and, 1)
+    addConnection(and, 2, not, 0)
+    addConnection(not, 1, led, 0)
 
     window.addEventListener("mousemove", handleMouseMove)
     window.addEventListener("mousedown", handleMouseDown)

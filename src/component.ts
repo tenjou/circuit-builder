@@ -1,8 +1,5 @@
 import { ComponentConfigs } from "./component-config"
-
-export type Brand<T, FlavorT> = T & {
-    _type?: FlavorT
-}
+import { Brand } from "./types"
 
 export type ComponentId = Brand<string, "ComponentId">
 
@@ -92,7 +89,7 @@ export const createComponent = (type: ComponentType): Component => {
             component = {
                 id,
                 type,
-                pins: createPins(2),
+                pins: createPins(numPins),
             }
             break
     }
@@ -102,19 +99,21 @@ export const createComponent = (type: ComponentType): Component => {
     return component
 }
 
-export const connectComponent = (fromComponentId: ComponentId, pinId: number, toComponentId: ComponentId, otherPinId: number) => {
+export const connectComponent = (fromComponentId: ComponentId, pinId: number, toComponentId: ComponentId, toPinId: number) => {
     const fromComponent = circuit.components[fromComponentId]
-    const componentToPin = fromComponent.pins[pinId]
-    if (componentToPin.componentId !== null) {
+    const toComponent = circuit.components[toComponentId]
+
+    const componentFromPin = fromComponent.pins[pinId]
+    const componentToPin = toComponent.pins[toPinId]
+    if (componentFromPin.componentId !== null || componentToPin.componentId !== null) {
         throw new Error("Pin is already connected")
     }
 
-    const toComponent = circuit.components[toComponentId]
     fromComponent.pins[pinId].componentId = toComponent.id
-    fromComponent.pins[pinId].pinId = otherPinId
+    fromComponent.pins[pinId].pinId = toPinId
 
-    toComponent.pins[otherPinId].componentId = fromComponent.id
-    toComponent.pins[otherPinId].pinId = pinId
+    toComponent.pins[toPinId].componentId = fromComponent.id
+    toComponent.pins[toPinId].pinId = pinId
 
     if (allPinsConnected(fromComponent)) {
         updateComponent(fromComponent)
