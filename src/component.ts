@@ -1,3 +1,5 @@
+import { ComponentConfigs } from "./component-config"
+
 export type Brand<T, FlavorT> = T & {
     _type?: FlavorT
 }
@@ -65,47 +67,34 @@ export const createPins = (num: number): Pin[] => {
 }
 
 export const createComponent = (type: ComponentType): Component => {
+    const componentCfg = ComponentConfigs[type]
+
     const id = (circuit.lastComponentId++).toString()
+    const numPins = componentCfg.in + componentCfg.out
 
     let component: Component
 
     switch (type) {
         case "on-off-switch":
-            component = {
-                id,
-                type,
-                pins: createPins(1),
-                isActive: false,
-            }
-            break
-
         case "led":
             component = {
                 id,
                 type,
-                pins: createPins(1),
+                pins: createPins(numPins),
                 isActive: false,
             }
             break
 
-        case "and":
-            component = {
-                id,
-                type,
-                pins: createPins(3),
-            }
-            break
+        case "circuit":
+            throw new Error("Circuit cannot be created with createComponent")
 
-        case "not":
+        default:
             component = {
                 id,
                 type,
                 pins: createPins(2),
             }
             break
-
-        default:
-            throw new Error("Unsupported component type: " + type)
     }
 
     circuit.components[id] = component

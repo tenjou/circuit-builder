@@ -1,166 +1,9 @@
-import { createRenderer, render, setHoveredEntity } from "./render"
-import { Circuit, ComponentId, ComponentType, createComponent } from "./component"
-import { uuid } from "./utils/uuid"
-import { createEntity, Entity, getEntityAt, moveEntity } from "./entity"
-import { GridSize } from "./config"
 import { getCamera, moveCamera } from "./camera"
-
-// interface Pin {
-//     pinIndex: number
-//     isOut: boolean
-// }
-
-// interface ComponentBasic {
-//     id: number
-//     x: number
-//     y: number
-//     width: number
-//     height: number
-//     out: number[]
-//     in: number[]
-// }
-
-// interface OnOffSwitch extends ComponentBasic {
-//     type: "on-off-switch"
-//     isOn: boolean
-// }
-
-// interface LED extends ComponentBasic {
-//     type: "led"
-//     isOn: boolean
-// }
-
-// type Component = OnOffSwitch | LED
-// type ComponentType = Component["type"]
-
-// interface App {
-//     canvas: HTMLCanvasElement
-//     ctx: CanvasRenderingContext2D
-//     componentsBuffer: Component[]
-//     components: Record<number, Component>
-//     wires: number[][]
-//     pins: Record<number, Pin>
-//     collisions: {
-//         components: Record<number, number>
-//         pins: Record<number, number>
-//     }
-//     hoveredPin: {
-//         componentedId: number
-//         gridX: number
-//         gridY: number
-//     }
-//     hoveredComponent: Component | null
-//     selectedComponent: Component | null
-//     draggedComponent: Component | null
-//     draggedOffsetX: number
-//     draggedOffsetY: number
-//     isHolding: boolean
-//     isDragging: boolean
-//     camera: {
-//         x: number
-//         y: number
-//     }
-//     lastComponentId: number
-//     wire: {
-//         startComponentId: number
-//         startGridX: number
-//         startGridY: number
-//         endGridX: number
-//         endGridY: number
-//         placement: number[]
-//     } | null
-// }
-
-// let app: App = {} as App
-
-// window.addEventListener("resize", () => {
-//     canvas.width = window.innerWidth
-//     canvas.height = window.innerHeight
-// })
-
-//     app = {
-//         canvas,
-//         ctx,
-//         componentsBuffer: [],
-//         components: {},
-//         wires: [],
-//         pins: {},
-//         hoveredPin: {
-//             componentedId: 0,
-//             gridX: 0,
-//             gridY: 0,
-//         },
-//         hoveredComponent: null,
-//         selectedComponent: null,
-//         draggedComponent: null,
-//         draggedOffsetX: 0,
-//         draggedOffsetY: 0,
-//         isHolding: false,
-//         isDragging: false,
-//         collisions: {
-//             components: {},
-//             pins: {},
-//         },
-//         camera: {
-//             x: 0,
-//             y: 0,
-//         },
-//         lastComponentId: 1,
-//         wire: null,
-//     }
-
-//     app.componentsBuffer.push(createComponent("on-off-switch", 100, 100))
-//     app.componentsBuffer.push(createComponent("on-off-switch", 100, 160))
-//     app.componentsBuffer.push(createComponent("led", 300, 160))
-
-//     connectToComponent(app.components[1], app.components[3], 0, 0)
-
-//     app.wires.push([2, 3, 5, 3])
-// }
-
-// const createComponent = (type: ComponentType, x: number, y: number): Component => {
-//     const id = app.lastComponentId++
-
-//     let component: Component
-
-//     switch (type) {
-//         case "on-off-switch":
-//             component = {
-//                 id,
-//                 type,
-//                 x,
-//                 y,
-//                 width: 40,
-//                 height: 40,
-//                 isOn: false,
-//                 in: [],
-//                 out: [0],
-//             }
-//             break
-
-//         case "led":
-//             component = {
-//                 id,
-//                 type,
-//                 x,
-//                 y,
-//                 width: 40,
-//                 height: 40,
-//                 isOn: false,
-//                 in: [0],
-//                 out: [],
-//             }
-//             break
-//     }
-
-//     app.components[id] = component
-
-//     moveComponent(component, x, y)
-
-//     console.log("Created component", component)
-
-//     return component
-// }
+import { ComponentId, ComponentType, createComponent } from "./component"
+import { GridSize } from "./config"
+import { createEntity, Entity, getEntityAt, moveEntity } from "./entity"
+import { createRenderer, render, setHoveredEntity } from "./render"
+import { uuid } from "./utils/uuid"
 
 // const moveComponent = (component: Component, x: number, y: number) => {
 //     if (component.x !== x || component.y !== y) {
@@ -226,44 +69,6 @@ import { getCamera, moveCamera } from "./camera"
 
 //     from.out[fromPinIndex] = to.id
 //     to.in[toPinIndex] = from.id
-// }
-
-// const render = () => {
-//     const { ctx } = app
-
-// ctx.resetTransform()
-
-// ctx.fillStyle = "rgb(229 231 235)"
-// ctx.fillRect(0, 0, app.canvas.width, app.canvas.height)
-
-//     renderGrid()
-
-//     ctx.translate(app.camera.x, app.camera.y)
-
-//     for (const wire of app.wires) {
-//         renderWire(wire)
-//     }
-//     if (app.wire) {
-//         renderWire(app.wire.placement)
-//     }
-
-//     for (const component of app.componentsBuffer) {
-//         renderComponent(component)
-//     }
-
-//     if (app.selectedComponent) {
-//         renderComponentHighlight(app.selectedComponent, 0.5)
-//     }
-
-//     if (app.hoveredPin.componentedId) {
-//         renderPinHiglight()
-//     } else {
-//         if (app.hoveredComponent) {
-//             renderComponentHighlight(app.hoveredComponent, 1)
-//         }
-//     }
-
-//     requestAnimationFrame(render)
 // }
 
 // const renderWire = (wire: number[]) => {
@@ -332,49 +137,6 @@ import { getCamera, moveCamera } from "./camera"
 //         const pinX = component.x + component.width
 //         const pinY = component.y + 20
 //         renderCircle(pinX, pinY, 4, "black")
-//     }
-// }
-
-// const renderComponentHighlight = (component: Component, alpha = 1) => {
-//     const ctx = app.ctx
-//     const offset = 2
-
-//     ctx.beginPath()
-//     ctx.globalAlpha = alpha
-//     ctx.strokeStyle = "rgb(255, 0, 0)"
-//     ctx.lineWidth = 2
-//     ctx.roundRect(component.x - offset, component.y - offset, component.width + offset * 2, component.height + offset * 2, 3)
-//     ctx.stroke()
-//     ctx.globalAlpha = 1
-// }
-
-// const renderPinHiglight = () => {
-//     const { ctx, hoveredPin } = app
-
-//     const x = hoveredPin.gridX * GridSize
-//     const y = hoveredPin.gridY * GridSize
-
-//     ctx.beginPath()
-//     ctx.strokeStyle = "rgb(255, 0, 0)"
-//     ctx.lineWidth = 2
-//     ctx.arc(x, y, PinRadius, 0, 2 * Math.PI)
-//     ctx.stroke()
-// }
-
-// const interactWithComponent = (component: Component) => {
-//     if (component.type !== "on-off-switch") {
-//         return
-//     }
-
-//     component.isOn = !component.isOn
-
-//     for (const pin of component.out) {
-//         if (pin === 0) {
-//             continue
-//         }
-
-//         const connectedComponent = app.components[pin]
-//         connectedComponent.isOn = component.isOn
 //     }
 // }
 
@@ -517,34 +279,6 @@ import { getCamera, moveCamera } from "./camera"
 //             app.selectedComponent = component
 //         }
 //     }
-// }
-
-// const generateWire = (startGridX: number, startGridY: number, endGridX: number, endGridY: number) => {
-//     const diffX = Math.abs(endGridX - startGridX)
-//     const diffY = Math.abs(endGridY - startGridY)
-
-//     const wire: number[] = []
-
-//     wire.push(startGridX, startGridY)
-//     wire.push(endGridX, endGridY)
-
-//     // if (diffY > diffX) {
-//     //     wirePlacement[0] = startGridX
-//     //     wirePlacement[1] = endGridY - Math.floor((endGridY - startGridY) / 2)
-//     //     wirePlacement[2] = endGridX
-//     //     wirePlacement[3] = endGridY - Math.floor((endGridY - startGridY) / 2)
-//     //     wirePlacement[4] = endGridX
-//     //     wirePlacement[5] = endGridY
-//     // } else {
-//     //     wirePlacement[0] = endGridX - Math.floor((endGridX - startGridX) / 2)
-//     //     wirePlacement[1] = startGridY
-//     //     wirePlacement[2] = endGridX - Math.floor((endGridX - startGridX) / 2)
-//     //     wirePlacement[3] = endGridY
-//     //     wirePlacement[4] = endGridX
-//     //     wirePlacement[5] = endGridY
-//     // }
-
-//     return wire
 // }
 
 interface App {
