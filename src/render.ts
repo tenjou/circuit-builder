@@ -1,7 +1,7 @@
 import { getCamera } from "./camera"
-import { getComponent } from "./component"
+import { getComponent, getPin } from "./component"
 import { ComponentConfigs } from "./component-config"
-import { GridSize } from "./config"
+import { GridSize } from "./app-config"
 import { Entity, getEntities, getEntity, getWires } from "./entity"
 
 let canvas: HTMLCanvasElement
@@ -52,7 +52,9 @@ export const render = () => {
         const x2 = toEntity.x + toEntity.width / 2
         const y2 = toEntity.y + toEntity.height / 2
 
-        renderWire(x1, y1, x2, y2)
+        const pin = getPin(fromEntity.componentId, wire.pinId)
+
+        renderWire(x1, y1, x2, y2, pin.current > 0)
     }
 
     for (const entity of entities) {
@@ -114,9 +116,9 @@ const renderLine = (x1: number, y1: number, x2: number, y2: number, color = "rgb
     ctx.stroke()
 }
 
-const renderWire = (x1: number, y1: number, x2: number, y2: number) => {
+const renderWire = (x1: number, y1: number, x2: number, y2: number, isActive: boolean) => {
     ctx.beginPath()
-    ctx.strokeStyle = "rgb(0, 0, 0)"
+    ctx.strokeStyle = isActive ? "rgb(14 165 233)" : "rgb(0, 0, 0)"
     ctx.lineWidth = 3
     ctx.moveTo(x1, y1)
     ctx.lineTo(x2, y2)

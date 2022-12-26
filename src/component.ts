@@ -2,10 +2,11 @@ import { ComponentConfigs } from "./component-config"
 import { Brand } from "./types"
 
 export type ComponentId = Brand<string, "ComponentId">
+export type PinId = Brand<number, "PinId">
 
 export interface Pin {
     componentId: ComponentId | null
-    pinId: number
+    pinId: PinId
     current: number
 }
 
@@ -186,3 +187,5 @@ const allPinsConnected = (component: Component) => {
 }
 
 export const getComponent = (id: ComponentId): Component => circuit.components[id]
+
+export const getPin = (componentId: ComponentId, pinId: number): Pin => circuit.components[componentId].pins[pinId]

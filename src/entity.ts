@@ -1,6 +1,6 @@
-import { ComponentId, getComponent } from "./component"
+import { ComponentId, getComponent, PinId } from "./component"
 import { ComponentConfigs } from "./component-config"
-import { GridIndexSize, GridSize } from "./config"
+import { GridIndexSize, GridSize } from "./app-config"
 import { Brand } from "./types"
 
 export type EntityId = Brand<string, "EntityId">
@@ -17,6 +17,7 @@ export interface Entity {
 export interface Wire {
     fromEntityId: EntityId
     toEntityId: EntityId
+    pinId: PinId
 }
 
 interface EntitiesState {
@@ -53,10 +54,11 @@ export const createEntity = (componentId: ComponentId, x: number, y: number): En
     return entity
 }
 
-export const createWire = (fromEntityId: EntityId, toEntityId: EntityId) => {
+export const createWire = (fromEntityId: EntityId, toEntityId: EntityId, pinId: number) => {
     const wire: Wire = {
         fromEntityId,
         toEntityId,
+        pinId,
     }
 
     state.wires.push(wire)

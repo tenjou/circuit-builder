@@ -1,5 +1,5 @@
 import { ComponentType } from "./component"
-import { GridSize } from "./config"
+import { GridSize } from "./app-config"
 
 interface ComponentConfig {
     type: ComponentType
