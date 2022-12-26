@@ -1,7 +1,7 @@
 import { createRenderer, render, setHoveredEntity } from "./render"
-import { Circuit, ComponentType, createComponent } from "./component"
+import { Circuit, ComponentId, ComponentType, createComponent } from "./component"
 import { uuid } from "./utils/uuid"
-import { createEntity, Entity, getEntityAt } from "./entity"
+import { createEntity, Entity, getEntityAt, moveEntity } from "./entity"
 import { GridSize } from "./config"
 import { getCamera, moveCamera } from "./camera"
 
@@ -411,9 +411,9 @@ import { getCamera, moveCamera } from "./camera"
 
 //         if (app.isHolding) {
 //             if (app.draggedComponent) {
-//                 const newX = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
-//                 const newY = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
-//                 moveComponent(app.draggedComponent, newX, newY)
+// const newX = Math.round((mouseX - app.draggedOffsetX) / GridSize) * GridSize
+// const newY = Math.round((mouseY - app.draggedOffsetY) / GridSize) * GridSize
+// moveComponent(app.draggedComponent, newX, newY)
 //             } else {
 //                 // app.camera.x += event.movementX
 //                 // app.camera.y += event.movementY
@@ -554,33 +554,60 @@ interface App {
 
 interface AppState {
     isDragging: boolean
+    dragging: {
+        entity: Entity
+        offsetX: number
+        offsetY: number
+    } | null
 }
 
 let app: App = {} as App
 let state: AppState = {} as AppState
 
-const addComponent = (componentType: ComponentType, x: number, y: number) => {
+const addComponent = (componentType: ComponentType, x: number, y: number): ComponentId => {
     const component = createComponent(componentType)
     createEntity(component.id, x, y)
+
+    return component.id
 }
 
 const handleMouseDown = (event: MouseEvent) => {
+    const camera = getCamera()
+    const mouseX = event.clientX - camera.x
+    const mouseY = event.clientY - camera.y
+
     if (event.button === 0) {
-        state.isDragging = true
+        const hoveredEntity = getEntityAt(mouseX, mouseY)
+        if (hoveredEntity) {
+            state.dragging = {
+                entity: hoveredEntity,
+                offsetX: mouseX - hoveredEntity.x,
+                offsetY: mouseY - hoveredEntity.y,
+            }
+        } else {
+            state.isDragging = true
+        }
     }
 }
 
 const handleMouseUp = (event: MouseEvent) => {
     if (event.button === 0) {
+        state.dragging = null
         state.isDragging = false
     }
 }
 
 const handleMouseMove = (event: MouseEvent) => {
     const camera = getCamera()
-
     const mouseX = event.clientX - camera.x
     const mouseY = event.clientY - camera.y
+
+    if (state.dragging) {
+        const newX = Math.round((mouseX - state.dragging.offsetX) / GridSize) * GridSize
+        const newY = Math.round((mouseY - state.dragging.offsetY) / GridSize) * GridSize
+        moveEntity(state.dragging.entity, newX, newY)
+        return
+    }
 
     const hoveredEntity = getEntityAt(mouseX, mouseY)
     setHoveredEntity(hoveredEntity)
@@ -599,11 +626,13 @@ const start = () => {
 
     state = {
         isDragging: false,
+        dragging: null,
     }
 
     createRenderer()
 
-    addComponent("on-off-switch", 100, 100)
+    const switchA = addComponent("on-off-switch", 100, 100)
+    const switchB = addComponent("on-off-switch", 100, 200)
 
     window.addEventListener("mousemove", handleMouseMove)
     window.addEventListener("mousedown", handleMouseDown)
