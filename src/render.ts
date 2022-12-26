@@ -43,6 +43,8 @@ export const render = () => {
         renderEntityHover(hoveredEntity)
     }
 
+    renderWire(150, 120, 210, 170)
+
     for (const entity of entities) {
         renderEntity(entity)
     }
@@ -74,7 +76,7 @@ const renderEntity = (entity: Entity) => {
             const x = entity.x - 10
             const y = entity.y + halfHeight + (i - (componentConfig.in - 1) / 2) * 20
             renderLine(entity.x, y, x, y)
-            renderCircle(x, y, 4, "rgb(255, 255, 255)")
+            renderCircle(x, y, 4)
         }
     }
     if (componentConfig.out > 0) {
@@ -82,7 +84,7 @@ const renderEntity = (entity: Entity) => {
             const x = entity.x + entity.width + 10
             const y = entity.y + halfHeight + (i - (componentConfig.out - 1) / 2) * 25
             renderLine(entity.x + entity.width, y, x, y)
-            renderCircle(x, y, 4, "rgb(255, 255, 255)")
+            renderCircle(x, y, 4)
         }
     }
 
@@ -102,7 +104,16 @@ const renderLine = (x1: number, y1: number, x2: number, y2: number, color = "rgb
     ctx.stroke()
 }
 
-const renderCircle = (x: number, y: number, radius: number, color = "rgb(155, 155, 155)") => {
+const renderWire = (x1: number, y1: number, x2: number, y2: number) => {
+    ctx.beginPath()
+    ctx.strokeStyle = "rgb(0, 0, 0)"
+    ctx.lineWidth = 3
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.stroke()
+}
+
+const renderCircle = (x: number, y: number, radius: number, color = "rgb(255, 255, 255)") => {
     ctx.beginPath()
     ctx.strokeStyle = "rgb(45, 45, 45)"
     ctx.fillStyle = color

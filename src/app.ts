@@ -1,5 +1,5 @@
 import { getCamera, moveCamera } from "./camera"
-import { ComponentId, ComponentType, createComponent } from "./component"
+import { ComponentId, ComponentType, connectComponent, createComponent } from "./component"
 import { GridSize } from "./config"
 import { createEntity, Entity, getEntityAt, moveEntity } from "./entity"
 import { createRenderer, render, setHoveredEntity } from "./render"
@@ -370,6 +370,8 @@ const start = () => {
     const and = addComponent("and", 220, 160)
     const not = addComponent("not", 340, 160)
     const led = addComponent("led", 480, 160)
+
+    connectComponent(switchA, 0, and, 0)
 
     window.addEventListener("mousemove", handleMouseMove)
     window.addEventListener("mousedown", handleMouseDown)
