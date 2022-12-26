@@ -25,7 +25,7 @@ export const createEntity = (componentId: ComponentId, x: number, y: number): En
     let height = GridSize
 
     switch (component.type) {
-        case "on-off-switch":
+        default:
             width = GridSize * 2
             height = GridSize * 2
             break

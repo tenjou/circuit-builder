@@ -1,5 +1,6 @@
 import { getCamera } from "./camera"
 import { getComponent } from "./component"
+import { ComponentConfigs } from "./component-config"
 import { GridSize } from "./config"
 import { Entity, getEntities } from "./entity"
 
@@ -51,12 +52,10 @@ export const render = () => {
 
 const renderEntity = (entity: Entity) => {
     const component = getComponent(entity.componentId)
+    const componentConfig = ComponentConfigs[component.type]
 
     switch (component.type) {
-        case "on-off-switch":
-            const halfWidth = entity.width / 2
-            const halfHeight = entity.height / 2
-
+        default:
             ctx.beginPath()
             ctx.fillStyle = "white"
             ctx.strokeStyle = "black"
@@ -65,6 +64,12 @@ const renderEntity = (entity: Entity) => {
             ctx.fill()
             ctx.stroke()
             break
+    }
+
+    if (componentConfig.label) {
+        const centerX = entity.x + entity.width / 2
+        const centerY = entity.y + entity.height / 2
+        renderText(componentConfig.label, centerX, centerY)
     }
 }
 
@@ -76,6 +81,16 @@ const renderCircle = (x: number, y: number, radius: number, color = "rgb(155, 15
     ctx.arc(x, y, radius, 0, 2 * Math.PI)
     ctx.fill()
     ctx.stroke()
+}
+
+const renderText = (text: string, x: number, y: number, color = "rgb(45, 45, 45)") => {
+    ctx.beginPath()
+    ctx.fillStyle = color
+    ctx.font = "12px Verdana"
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.fillText(text, x, y)
+    ctx.closePath()
 }
 
 const renderGrid = () => {
