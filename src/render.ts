@@ -61,6 +61,8 @@ export const render = () => {
         renderEntity(entity)
     }
 
+    renderCircle(debugX * GridSize, debugY * GridSize, 4, "red")
+
     requestAnimationFrame(render)
 }
 
@@ -186,4 +188,12 @@ const renderEntityHover = (entity: Entity) => {
 
 export const setHoveredEntity = (entity: Entity | null) => {
     hoveredEntity = entity
+}
+
+let debugX = 0
+let debugY = 0
+
+export const setDebugPosition = (x: number, y: number) => {
+    debugX = x
+    debugY = y
 }

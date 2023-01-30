@@ -20,12 +20,18 @@ export interface Wire {
     pinId: PinId
 }
 
+interface Pin {
+    id: PinId
+    entityId: EntityId
+}
+
 interface EntitiesState {
     buffer: Entity[]
     wires: Wire[]
     lastId: number
     collisions: {
         entities: Record<number, Entity>
+        pins: Record<number, Pin>
     }
 }
 
@@ -112,6 +118,7 @@ export const createEntities = () => {
         lastId: 0,
         collisions: {
             entities: {},
+            pins: {},
         },
     }
     entitiesMap = {}

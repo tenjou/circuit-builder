@@ -2,7 +2,7 @@ import { GridSize } from "./app-config"
 import { getCamera, moveCamera } from "./camera"
 import { ComponentType, connectComponent, createComponent, interactWithComponent } from "./component"
 import { createEntities, createEntity, createWire, Entity, EntityId, getEntity, getEntityAt, moveEntity } from "./entity"
-import { createRenderer, render, setHoveredEntity } from "./render"
+import { createRenderer, render, setDebugPosition, setHoveredEntity } from "./render"
 import { uuid } from "./utils/uuid"
 
 interface App {
@@ -72,6 +72,11 @@ const handleMouseMove = (event: MouseEvent) => {
     const camera = getCamera()
     const mouseX = event.clientX - camera.x
     const mouseY = event.clientY - camera.y
+
+    const gridX = Math.round(mouseX / GridSize)
+    const gridY = Math.round(mouseY / GridSize)
+    console.log(`(${gridX}, ${gridY})`)
+    setDebugPosition(gridX, gridY)
 
     if (!state.isHolding) {
         const hoveredEntity = getEntityAt(mouseX, mouseY)
